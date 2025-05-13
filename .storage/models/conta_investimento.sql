@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS CONTAINVESTIMENTO (
+    idConta INT PRIMARY KEY REFERENCES CONTA(idConta),
+    saldoCINvest FLOAT DEFAULT 0.00,
+    dinheiroInvestido FLOAT DEFAULT 0.00,
+    quantidadeInvest INT DEFAULT 0
+)

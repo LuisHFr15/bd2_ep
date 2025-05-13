@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS PESSOAFISICA (
+    cpf VARCHAR(14) PRIMARY KEY REFERENCES PESSOA(codigoPessoa),
+    primeiroNome VARCHAR(30) NOT NULL,
+    segundoNome VARCHAR(30) NOT NULL,
+    dataNascimento DATE NOT NULL
+)
