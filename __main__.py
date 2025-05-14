@@ -43,5 +43,11 @@ try:
     
     create_database(s3, con)
 
+    # item = s3.get_object(Bucket=bucket_name, Key='functions/create_database.sql')
+    # with open('create_database.sql', 'w') as file:
+    #     script = item['Body'].read().decode('utf-8')
+    #     file.write(script)
+    
+
 except Exception as e:
     print(e)
