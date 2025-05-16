@@ -3,6 +3,7 @@ import os
 import boto3
 from dotenv import load_dotenv
 from utils.db import alimenta_banco_pessoa
+from faker import Faker
 
 
 load_dotenv()
@@ -45,6 +46,7 @@ try:
     # create_database(s3, con)
 
     
-    alimenta_banco_pessoa(5, con)
+    # alimenta_banco_pessoa(10, con)
+
 except Exception as e:
     print(e)

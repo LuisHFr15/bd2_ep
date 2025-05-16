@@ -101,35 +101,92 @@ def gera_pessoa(count: int) -> list:
     log_criacao = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     pessoa = [codigo, tipo_codigo, 0, email_comunicacao, log_criacao]
+    if 'F' in pessoa:
+        dados_adicionais = [codigo
+                            , name_list[0]
+                            , ' '.join(name_list[1::])
+                            , fake.date_of_birth(minimum_age=18, maximum_age=82)]
+    else:
+        dados_adicionais = [codigo
+                            , fake.company()
+                            , fake.date_of_birth(minimum_age=1, maximum_age=48)]
 
-    return pessoa
+    return [pessoa, dados_adicionais]
 
-
-def alimenta_banco_pessoa(num_rows: int, con: pymysql.connect) -> bool:
-    script = """INSERT INTO PESSOA 
-    (codigoPessoa, tipoCodigo, quantidadeContas, emailComunicacao, logCriacao)
-    VALUES
-    """
-    cursor = con.cursor()
-    for count in range(1, (num_rows + 1)):
-        pessoa = gera_pessoa(count)
-        script += '('
-        for coluna in pessoa:
-            if coluna != pessoa[2]:
+def completa_script(script_inicial: str, dados: list, contador: int, fim: int, dado_inteiro: int = None) -> str:
+    script = script_inicial + '('
+    for coluna in dados:
+        if dado_inteiro:
+            if coluna != dados[dado_inteiro]:
                 script += "'" + str(coluna) + "',"
             else:
                 script += str(coluna) + ","
 
-        if count != num_rows:
-            script += """),
-            """
         else:
-            script += ');'
+            script += "'" + str(coluna) + "',"
+
+    if contador != fim:
+        script += """),
+        """
+    else:
+        script += ');'
+
+    return script
+
+def gera_script_pessoa_fisica(pessoas_fisicas: list) -> str:
+    script = """INSERT INTO PESSOAFISICA
+    (cpf, primeiroNome, segundoNome, dataNascimento)
+    VALUES
+    """
+
+    for index in range(0, len(pessoas_fisicas)):
+        script = completa_script(script, pessoas_fisicas[index], index, len(pessoas_fisicas) - 1)
+
+    script = script.replace(',)', ')')
+
+    return script
+
+def gera_script_pessoa_juridica(pessoas_juridicas: list) -> str:
+    script = """INSERT INTO PESSOAJURIDICA
+    (cnpj, razaoSocial, dataFundacao)
+    VALUES
+    """
+
+    for index in range(0, len(pessoas_juridicas)):
+        script = completa_script(script, pessoas_juridicas[index], index, len(pessoas_juridicas) - 1)
+
+    script = script.replace(',)', ')')
+
+    return script
+
+def alimenta_banco_pessoa(num_rows: int, con: pymysql.connect) -> bool:
+    script_pessoa = """INSERT INTO PESSOA 
+    (codigoPessoa, tipoCodigo, quantidadeContas, emailComunicacao, logCriacao)
+    VALUES
+    """
+    pessoas_juridicas = []
+    pessoas_fisicas = []
+
+    cursor = con.cursor()
+
+    for count in range(1, (num_rows + 1)):
+        pessoa = gera_pessoa(count)
+        pessoas_fisicas.append(pessoa[1]) if 'F' in pessoa[0] else pessoas_juridicas.append(pessoa[1])
+        script_pessoa = completa_script(script_pessoa, pessoa[0], count, num_rows, dado_inteiro=2)
+    
     try:
-        cursor.execute(script.replace(',)', ')'))
+        script_pessoa = script_pessoa.replace(',)', ')')
+        script_pessoa_fisica = gera_script_pessoa_fisica(pessoas_fisicas)
+        script_pessoa_juridica = gera_script_pessoa_juridica(pessoas_juridicas)
+
+        cursor.execute(script_pessoa)
+        cursor.execute(script_pessoa_fisica)
+        cursor.execute(script_pessoa_juridica)
         con.commit()
+
         print('Database alimentado com sucesso')
         return True
+        
     except Exception as e:
         print('Falha ao alimentar a tabela Pessoa', e)
         return False
