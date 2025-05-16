@@ -2,7 +2,8 @@ import pymysql
 import os
 import boto3
 from dotenv import load_dotenv
-from utils.db import create_database
+from utils.db import alimenta_banco_pessoa
+
 
 load_dotenv()
 
@@ -41,13 +42,9 @@ try:
                         ,port=db_port
                         ,database=db_name)
     
-    create_database(s3, con)
+    # create_database(s3, con)
 
-    # item = s3.get_object(Bucket=bucket_name, Key='functions/create_database.sql')
-    # with open('create_database.sql', 'w') as file:
-    #     script = item['Body'].read().decode('utf-8')
-    #     file.write(script)
     
-
+    alimenta_banco_pessoa(5, con)
 except Exception as e:
     print(e)
