@@ -3,22 +3,15 @@ import os
 import pymysql
 import random
 import threading
-import pymysql
 from tqdm import tqdm
+from functions.utils import execute_script
 from faker import Faker
-from utils.sys_func import get_random_seed
+from functions.utils import get_random_seed, executa_batches
 from datetime import datetime
 from dotenv import load_dotenv
 
 
 load_dotenv()
-
-def execute_script(script: str, cursor: pymysql.connect.cursor) -> None:
-    for command in script.split(';'):
-        command = command.strip()
-        print("Executando \n", command)
-        if command:
-            cursor.execute(command)
 
 
 def create_database(s3: boto3.client, con: pymysql.connect) -> bool:
@@ -42,7 +35,7 @@ def create_database(s3: boto3.client, con: pymysql.connect) -> bool:
         return True
     
 
-def get_email(count: int, lista_nome: list) -> str:
+def get_email(count: int, lista_nome: list, random: random.Random) -> str:
     adendo = ['1','2','3','4','5','6','7','8','9','_']
     
     if count % 5 in (0,1):
@@ -68,7 +61,7 @@ def get_email(count: int, lista_nome: list) -> str:
     return email_comunicacao
 
 
-def get_codigo(count: int) -> str:
+def get_codigo(count: int, random: random.Random) -> str:
     codigo = ''
     # cpf
     if count % 3 != 0:
@@ -83,7 +76,7 @@ def get_codigo(count: int) -> str:
     return codigo
 
 
-def gera_pessoa(count: int) -> list:
+def gera_pessoa(contador: int, thread_id: int) -> list:
     fake = Faker('pt_BR')
     name = fake.name()
 
@@ -95,13 +88,14 @@ def gera_pessoa(count: int) -> list:
         
     seed = get_random_seed()
 
-    random.seed(seed + count)
+    rand = random.Random((seed * 1000) + (thread_id * 1000) + (contador * 3))
+
     
-    codigo = get_codigo(count)
+    codigo = get_codigo(contador, rand)
     
     tipo_codigo = 'F' if len(codigo) == 11 else 'J'
 
-    email_comunicacao = get_email(count, name_list)
+    email_comunicacao = get_email(contador, name_list, rand)
 
     log_criacao = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -119,37 +113,32 @@ def gera_pessoa(count: int) -> list:
     return [pessoa, dados_adicionais]
 
 
-def executa_batches(cursor: pymysql.connect.cursor, script: str, dados: list, batch_size: int = 10000) -> None:
-    for index in range(0, len(dados), batch_size):
-        batch = dados[index:(index + batch_size)]
-        cursor.executemany(script, batch)
-
-
-def worker_alimenta_pessoa(con_params: dict, start: int, end: int, thread_id: int, batch_size=10000):
+def worker_alimenta_pessoa(con_params: dict, start: int, end: int, thread_id: int, batch_size: int) -> None:
     try:
         con = pymysql.connect(**con_params)
         cursor = con.cursor()
 
-        progress_bar = tqdm(total=(end - start + 1), desc=f"Thread {thread_id}", position=thread_id)
+        progress_bar = tqdm(total=(end - start), desc=f"Thread {thread_id}", position=thread_id)
 
         pessoas = []
         pessoas_juridicas = []
         pessoas_fisicas = []
 
         for count in range(start, end):
-            pessoa = gera_pessoa(count)
+            pessoa = gera_pessoa(count, thread_id)
             pessoas_fisicas.append(pessoa[1]) if pessoa[0][1] == 'F' else pessoas_juridicas.append(pessoa[1])
             pessoas.append(pessoa[0])
+            progress_bar.update(1)
 
-        script_pessoa = """INSERT INTO PESSOA 
+        script_pessoa = """INSERT IGNORE INTO PESSOA 
             (codigoPessoa, tipoCodigo, quantidadeContas, emailComunicacao, logCriacao)
             VALUES (%s, %s, %s, %s, %s)
         """
-        script_pessoa_juridica = """INSERT INTO PESSOAJURIDICA
+        script_pessoa_juridica = """INSERT IGNORE INTO PESSOAJURIDICA
             (cnpj, razaoSocial, dataFundacao)
             VALUES (%s, %s, %s)
         """
-        script_pessoa_fisica = """INSERT INTO PESSOAFISICA
+        script_pessoa_fisica = """INSERT IGNORE INTO PESSOAFISICA
             (cpf, primeiroNome, segundoNome, dataNascimento)
             VALUES (%s, %s, %s, %s)
         """
@@ -166,8 +155,7 @@ def worker_alimenta_pessoa(con_params: dict, start: int, end: int, thread_id: in
         progress_bar.close()
     
 
-
-def alimenta_banco_pessoa_threaded(num_rows: int, con_params, num_threads=5, batch_size=10000):
+def alimenta_banco_pessoa_threaded(num_rows: int, con_params: dict, num_threads: int = 5, batch_size: int = 5000) -> None:
     threads = []
     chunk_size = num_rows // num_threads
 
@@ -183,13 +171,3 @@ def alimenta_banco_pessoa_threaded(num_rows: int, con_params, num_threads=5, bat
         t.join()
 
     print('Todas as threads finalizaram.')
-
-def alimenta_db_contas(num_rows: int, con: pymysql.connect) -> list:
-    cursor = con.cursor()
-
-    cursor.execute("SELECT DISTINCT codigoPessoa FROM PESSOA")
-    codigos = cursor.fetchall()
-
-    script = """INSERT INTO CONTA
-    (codigoPessoa, agencia, nroConta, senhaConta, renda, perfilCredito, ativa, dataCriacao)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
