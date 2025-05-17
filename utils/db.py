@@ -2,6 +2,9 @@ import boto3
 import os
 import pymysql
 import random
+import threading
+import pymysql
+from tqdm import tqdm
 from faker import Faker
 from utils.sys_func import get_random_seed
 from datetime import datetime
@@ -38,6 +41,7 @@ def create_database(s3: boto3.client, con: pymysql.connect) -> bool:
     else:
         return True
     
+
 def get_email(count: int, lista_nome: list) -> str:
     adendo = ['1','2','3','4','5','6','7','8','9','_']
     
@@ -62,6 +66,7 @@ def get_email(count: int, lista_nome: list) -> str:
         email_comunicacao = email_comunicacao[caractere_inicial::]
 
     return email_comunicacao
+
 
 def get_codigo(count: int) -> str:
     codigo = ''
@@ -101,7 +106,7 @@ def gera_pessoa(count: int) -> list:
     log_criacao = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     pessoa = [codigo, tipo_codigo, 0, email_comunicacao, log_criacao]
-    if 'F' in pessoa:
+    if tipo_codigo == 'F':
         dados_adicionais = [codigo
                             , name_list[0]
                             , ' '.join(name_list[1::])
@@ -113,80 +118,78 @@ def gera_pessoa(count: int) -> list:
 
     return [pessoa, dados_adicionais]
 
-def completa_script(script_inicial: str, dados: list, contador: int, fim: int, dado_inteiro: int = None) -> str:
-    script = script_inicial + '('
-    for coluna in dados:
-        if dado_inteiro:
-            if coluna != dados[dado_inteiro]:
-                script += "'" + str(coluna) + "',"
-            else:
-                script += str(coluna) + ","
 
-        else:
-            script += "'" + str(coluna) + "',"
+def executa_batches(cursor: pymysql.connect.cursor, script: str, dados: list, batch_size: int = 10000) -> None:
+    for index in range(0, len(dados), batch_size):
+        batch = dados[index:(index + batch_size)]
+        cursor.executemany(script, batch)
 
-    if contador != fim:
-        script += """),
+
+def worker_alimenta_pessoa(con_params: dict, start: int, end: int, thread_id: int, batch_size=10000):
+    try:
+        con = pymysql.connect(**con_params)
+        cursor = con.cursor()
+
+        progress_bar = tqdm(total=(end - start + 1), desc=f"Thread {thread_id}", position=thread_id)
+
+        pessoas = []
+        pessoas_juridicas = []
+        pessoas_fisicas = []
+
+        for count in range(start, end):
+            pessoa = gera_pessoa(count)
+            pessoas_fisicas.append(pessoa[1]) if pessoa[0][1] == 'F' else pessoas_juridicas.append(pessoa[1])
+            pessoas.append(pessoa[0])
+
+        script_pessoa = """INSERT INTO PESSOA 
+            (codigoPessoa, tipoCodigo, quantidadeContas, emailComunicacao, logCriacao)
+            VALUES (%s, %s, %s, %s, %s)
         """
-    else:
-        script += ');'
+        script_pessoa_juridica = """INSERT INTO PESSOAJURIDICA
+            (cnpj, razaoSocial, dataFundacao)
+            VALUES (%s, %s, %s)
+        """
+        script_pessoa_fisica = """INSERT INTO PESSOAFISICA
+            (cpf, primeiroNome, segundoNome, dataNascimento)
+            VALUES (%s, %s, %s, %s)
+        """
 
-    return script
+        executa_batches(cursor, script_pessoa, pessoas, batch_size)
+        executa_batches(cursor, script_pessoa_fisica, pessoas_fisicas, batch_size)
+        executa_batches(cursor, script_pessoa_juridica, pessoas_juridicas, batch_size)
 
-def gera_script_pessoa_fisica(pessoas_fisicas: list) -> str:
-    script = """INSERT INTO PESSOAFISICA
-    (cpf, primeiroNome, segundoNome, dataNascimento)
-    VALUES
-    """
+        con.commit()
+    except Exception as e:
+        print(f'Erro na thread {start}-{end}:', e)
+    finally:
+        con.close()
+        progress_bar.close()
+    
 
-    for index in range(0, len(pessoas_fisicas)):
-        script = completa_script(script, pessoas_fisicas[index], index, len(pessoas_fisicas) - 1)
 
-    script = script.replace(',)', ')')
+def alimenta_banco_pessoa_threaded(num_rows: int, con_params, num_threads=5, batch_size=10000):
+    threads = []
+    chunk_size = num_rows // num_threads
 
-    return script
+    for i in range(num_threads):
+        start = i * chunk_size + 1
 
-def gera_script_pessoa_juridica(pessoas_juridicas: list) -> str:
-    script = """INSERT INTO PESSOAJURIDICA
-    (cnpj, razaoSocial, dataFundacao)
-    VALUES
-    """
+        end = (i + 1) * chunk_size + 1 if i != num_threads - 1 else num_rows + 1
+        t = threading.Thread(target=worker_alimenta_pessoa, args=(con_params, start, end, i, batch_size))
+        threads.append(t)
+        t.start()
 
-    for index in range(0, len(pessoas_juridicas)):
-        script = completa_script(script, pessoas_juridicas[index], index, len(pessoas_juridicas) - 1)
+    for t in threads:
+        t.join()
 
-    script = script.replace(',)', ')')
+    print('Todas as threads finalizaram.')
 
-    return script
-
-def alimenta_banco_pessoa(num_rows: int, con: pymysql.connect) -> bool:
-    script_pessoa = """INSERT INTO PESSOA 
-    (codigoPessoa, tipoCodigo, quantidadeContas, emailComunicacao, logCriacao)
-    VALUES
-    """
-    pessoas_juridicas = []
-    pessoas_fisicas = []
-
+def alimenta_db_contas(num_rows: int, con: pymysql.connect) -> list:
     cursor = con.cursor()
 
-    for count in range(1, (num_rows + 1)):
-        pessoa = gera_pessoa(count)
-        pessoas_fisicas.append(pessoa[1]) if 'F' in pessoa[0] else pessoas_juridicas.append(pessoa[1])
-        script_pessoa = completa_script(script_pessoa, pessoa[0], count, num_rows, dado_inteiro=2)
-    
-    try:
-        script_pessoa = script_pessoa.replace(',)', ')')
-        script_pessoa_fisica = gera_script_pessoa_fisica(pessoas_fisicas)
-        script_pessoa_juridica = gera_script_pessoa_juridica(pessoas_juridicas)
+    cursor.execute("SELECT DISTINCT codigoPessoa FROM PESSOA")
+    codigos = cursor.fetchall()
 
-        cursor.execute(script_pessoa)
-        cursor.execute(script_pessoa_fisica)
-        cursor.execute(script_pessoa_juridica)
-        con.commit()
-
-        print('Database alimentado com sucesso')
-        return True
-        
-    except Exception as e:
-        print('Falha ao alimentar a tabela Pessoa', e)
-        return False
+    script = """INSERT INTO CONTA
+    (codigoPessoa, agencia, nroConta, senhaConta, renda, perfilCredito, ativa, dataCriacao)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""

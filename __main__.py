@@ -1,10 +1,8 @@
 import pymysql
 import os
 import boto3
+from utils.db import alimenta_banco_pessoa_threaded
 from dotenv import load_dotenv
-from utils.db import alimenta_banco_pessoa
-from faker import Faker
-
 
 load_dotenv()
 
@@ -36,17 +34,20 @@ token = rds.generate_db_auth_token(DBHostname=db_endpoint
 
 
 try:
-    con = pymysql.connect(auth_plugin_map={'mysql_clear_password': None}
-                        ,host=db_endpoint
-                        ,user=db_user
-                        ,password=db_password
-                        ,port=db_port
-                        ,database=db_name)
-    
+    con_params = {
+        'host': db_endpoint,
+        'user': db_user,
+        'password': db_password,
+        'port': db_port,
+        'database': db_name,
+        'auth_plugin_map': {'mysql_clear_password': None}
+    }
+    con = pymysql.connect(**con_params)
     # create_database(s3, con)
 
     
-    # alimenta_banco_pessoa(10, con)
+    # alimenta_banco_pessoa_threaded(300, con_params, num_threads=6)
+
 
 except Exception as e:
     print(e)

@@ -1,0 +1,97 @@
+CREATE DATABASE IF NOT EXISTS BANKSYSTEM;
+
+CREATE TABLE IF NOT EXISTS PESSOA (
+    codigoPessoa VARCHAR(14) PRIMARY KEY,
+    tipoCodigo CHAR(1) NOT NULL,
+    quantidadeContas INT NOT NULL,
+    emailComunicacao VARCHAR(30) NOT NULL,
+    logCriacao TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS PESSOAFISICA (
+    cpf VARCHAR(14) PRIMARY KEY REFERENCES PESSOA(codigoPessoa),
+    primeiroNome VARCHAR(30) NOT NULL,
+    segundoNome VARCHAR(30) NOT NULL,
+    dataNascimento DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS PESSOAJURIDICA (
+    cnpj VARCHAR(14) PRIMARY KEY REFERENCES PESSOA(codigoPessoa),
+    razaoSocial VARCHAR(50) NOT NULL,
+    dataFundacao DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS CONTA (
+    idConta INTEGER PRIMARY KEY AUTO_INCREMENT,
+    codigoPessoa VARCHAR(14) NOT NULL,
+    agencia INT NOT NULL,
+    nroConta INT NOT NULL,
+    senhaConta VARCHAR(30) NOT NULL,
+    renda FLOAT,
+    perfilCredito VARCHAR(20),
+    ativa CHAR(1),
+    dataCriacao TIMESTAMP NOT NULL,
+    FOREIGN KEY (codigoPessoa) REFERENCES PESSOA(codigoPessoa)
+);
+
+CREATE TABLE IF NOT EXISTS CONTAINVESTIMENTO (
+    idConta INT PRIMARY KEY REFERENCES CONTA(idConta),
+    saldoCINvest FLOAT DEFAULT 0.00,
+    dinheiroInvestido FLOAT DEFAULT 0.00,
+    quantidadeInvest INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS CONTACORRENTE (
+    idConta INT PRIMARY KEY REFERENCES CONTA(idConta),
+    saldoConta FLOAT DEFAULT 0.00,
+    limiteConta FLOAT DEFAULT 100.00
+);
+
+CREATE TABLE IF NOT EXISTS CARTAOCREDITO (
+    idCartao INT PRIMARY KEY,
+    idConta INT NOT NULL,
+    nroCartao VARCHAR(16) NOT NULL,
+    cvc INT NOT NULL,
+    validade DATE NOT NULL,
+    nomeCartao VARCHAR(30) NOT NULL,
+    limiteCartao INT NOT NULL,
+    faturaCartao FLOAT DEFAULT 0.00,
+    ativo CHAR(1),
+    FOREIGN KEY (idConta) REFERENCES CONTA(idConta)
+);
+
+CREATE TABLE IF NOT EXISTS INVESTIMENTO (
+    idInvest INT PRIMARY KEY,
+    cnpjOferecedor VARCHAR(14),
+    diasCotizacao INT NOT NULL,
+    diasRetirada INT NOT NULL,
+    totalInvestido FLOAT DEFAULT 0.00,
+    tipoRenda VARCHAR(10) NOT NULL,
+    rendMedioMes FLOAT NOT NULL,
+    totalContas INT DEFAULT 0,
+    ativo CHAR(1),
+    FOREIGN KEY (cnpjOferecedor) REFERENCES PESSOAJURIDICA(cnpj)
+);
+
+CREATE TABLE IF NOT EXISTS ORDEMINVESTIMENTO (
+    idOrdem INT PRIMARY KEY,
+    idConta INT NOT NULL,
+    idInvest INT NOT NULL,
+    quantiaInvest FLOAT NOT NULL,
+    dataInvest TIMESTAMP NOT NULL,
+    FOREIGN KEY (idConta) REFERENCES CONTAINVESTIMENTO(idConta),
+    FOREIGN KEY (idInvest) REFERENCES INVESTIMENTO(idInvest)
+);
+
+CREATE TABLE IF NOT EXISTS TRANSACOES (
+    idTransacao INT PRIMARY KEY,
+    contaOrigem INT NOT NULL,
+    contaDestino INT NOT NULL,
+    idCartao INT NOT NULL,
+    tipoTransacao VARCHAR(7) NOT NULL,
+    valorTransacao FLOAT NOT NULL,
+    dataTransacao TIMESTAMP NOT NULL,
+    FOREIGN KEY (contaOrigem) REFERENCES CONTACORRENTE(idConta),
+    FOREIGN KEY (contaDestino) REFERENCES CONTACORRENTE(idConta),
+    FOREIGN KEY (idCartao) REFERENCES CARTAOCREDITO(idCartao)
+);
