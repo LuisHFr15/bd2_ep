@@ -1,7 +1,7 @@
 import pymysql
 import random
 import threading
-from datetime import datetime
+from datetime import datetime, date
 from faker import Faker
 from functions.utils import get_random_seed, executa_batches
 from tqdm import tqdm
@@ -87,6 +87,62 @@ def gera_contas(contador: int, thread_id: int, codigoPessoa: str, rand: random.R
         return [conta, tipo_conta, conta_investimento]
 
 
+def gera_cartao_credito(contador: int, id_conta: int, perfil_credito: str, nome_pessoa: str, random: random.Random) -> list:
+    id_cartao = random.randint(1, 999999999)
+
+    nro_cartao = ''
+    for i in range(16):
+        nro_cartao += str(random.randint(0, 9))
+
+    cvc = random.randint(100, 999)
+    limite_baixo = [limite for limite in range(1000, 4000, 100)]
+    limite_medio = [limite for limite in range(4000, 10000, 100)]
+    limite_alto = [limite for limite in range(10000, 50000, 1000)]
+
+    dia = 1
+    mes = random.randint(1, 12)
+    ano = random.randint(2020, 2035)
+
+    validade = date(ano, mes, dia)
+    validade = str(datetime.strftime(validade, '%Y-%m-%d'))
+
+    if contador % 8 in (0, 1) and ano > 25:
+        ativo = 'S'
+    else:
+        ativo = 'N'
+
+    if perfil_credito == 'BAIXO':
+        limite = random.choice(limite_baixo)
+    elif perfil_credito == 'MEDIO':
+        limite = random.choice(limite_medio)
+    else:
+        limite = random.choice(limite_alto)
+
+
+
+    fatura = round(random.uniform(100, 4000), 2) if ativo == 'S' else 0
+
+    return [id_cartao, id_conta, nro_cartao, cvc, validade, nome_pessoa, limite, fatura, ativo]
+
+
+def gera_transacao(contador: int, conta_origem: int, conta_destino: int, id_cartao: int, random: random.Random) -> list:
+    fake = Faker('pt_BR')
+    id_transacao = random.randint(1, 999999999999)
+    valor_transacao = round(random.uniform(1, 6000), 2)
+
+    if valor_transacao > 3000 or contador % 4 in (0, 1):
+        tipo_transacao = 'DEBITO'
+    else:
+        tipo_transacao = 'CREDITO'
+
+    data_transacao = fake.date_of_birth(minimum_age=0, maximum_age=5)
+    if tipo_transacao == 'CREDITO':
+        transacao = [id_transacao, conta_origem, conta_destino, id_cartao, tipo_transacao, valor_transacao, data_transacao]
+    else:
+        transacao = [id_transacao, conta_origem, conta_destino, None, tipo_transacao, valor_transacao, data_transacao]
+
+    return transacao
+
 def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: int, batch_size: int, codigos_pessoas: list) -> None:
     con = pymysql.connect(**con_params)
     cursor = con.cursor()
@@ -148,6 +204,92 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
         progress_bar.close()
 
 
+def worker_alimenta_cartao_credito(con_params: dict, start: int, end: int, thread_id: int, batch_size: int, contas: list) -> None:
+    script_cartao = """INSERT IGNORE INTO CARTAOCREDITO
+                            (idCartao, idConta, nroCartao, cvc, validade, nomeCartao, limiteCartao, faturaCartao, ativo)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    
+    con = pymysql.connect(**con_params)
+    cursor = con.cursor()
+
+    try:
+        progress_bar = tqdm(
+            total=(end - start),
+            desc=f"Thread {thread_id}",
+            position=thread_id,
+            dynamic_ncols=True,
+            leave=False
+        )
+
+        cartoes = []
+
+        for count in range(start, end):
+            seed = get_random_seed()
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * 3))
+
+            conta = random.choice(contas)
+            cartao = gera_cartao_credito(count, conta[0], conta[1], conta[2], rand)
+            cartoes.append(cartao)
+
+            progress_bar.update(1)
+
+        executa_batches(cursor, script_cartao, cartoes, batch_size)
+        con.commit()
+
+        print(f'Thread {thread_id} finalizada com sucesso')
+
+    except Exception as e:
+        print(f'Falha ao executar thread {thread_id}:', e)
+
+    finally:
+        con.close()
+        progress_bar.close()
+
+
+def worker_alimenta_transacao(con_params: dict, start: int, end: int, thread_id: int, batch_size: int, contas: list, cartoes: list) -> None:
+    script_transacao = """INSERT IGNORE INTO TRANSACOES
+                            (idTransacao, contaOrigem, contaDestino, idCartao, tipoTransacao, valorTransacao, dataTransacao)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+    
+    con = pymysql.connect(**con_params)
+    cursor = con.cursor()
+
+    try:
+        progress_bar = tqdm(
+            total=(end - start),
+            desc=f"Thread {thread_id}",
+            position=thread_id,
+            dynamic_ncols=True,
+            leave=False
+        )
+
+        transacoes = []
+
+        for count in range(start, end):
+            seed = get_random_seed()
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * 3))
+
+            conta = random.choice(contas)
+            cartao = random.choice(cartoes)
+            transacao = gera_transacao(count, conta, cartao[0], cartao[1], rand)
+            transacoes.append(transacao)
+
+            progress_bar.update(1)
+
+        executa_batches(cursor, script_transacao, transacoes, batch_size)
+        con.commit()
+
+        print(f'Thread {thread_id} finalizada com sucesso')
+
+    except Exception as e:
+        print(f'Falha ao executar thread {thread_id}:', e)
+
+    finally:
+        con.close()
+        progress_bar.close()
+
+
+
 def alimenta_banco_conta_threaded(num_rows: int, con_params: dict, codigos_pessoas: list, num_threads: int = 5,  batch_size: int = 5000) -> None:
     threads = []
     chunk_size = num_rows // num_threads
@@ -164,3 +306,38 @@ def alimenta_banco_conta_threaded(num_rows: int, con_params: dict, codigos_pesso
         thread.join()
 
     print('Todas as threads finalizaram.')
+
+
+def alimenta_cartao_threaded(num_rows: int, con_params: dict, contas: list, num_threads: int = 5, batch_size: int = 5000) -> None:
+    threads = []
+    chunk_size = num_rows // num_threads
+
+    for index in range(num_threads):
+        start = (index * chunk_size) + 1
+        end = (index + 1) * chunk_size + 1 if index != num_threads - 1 else num_rows + 1
+
+        thread = threading.Thread(target=worker_alimenta_cartao_credito, args=(con_params, start, end, index, batch_size, contas))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    print('Todas as threads finalizadas')
+
+def alimenta_transacao_threaded(num_rows: int, con_params: dict, contas: list, cartoes: list, num_threads: int = 5, batch_size: int = 5000) -> None:
+    threads = []
+    chunk_size = num_rows // num_threads
+
+    for index in range(num_threads):
+        start = (index * chunk_size) + 1
+        end = (index + 1) * chunk_size + 1 if index != num_threads - 1 else num_rows + 1
+
+        thread = threading.Thread(target=worker_alimenta_transacao, args=(con_params, start, end, index, batch_size, contas, cartoes))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    print('Todas as threads finalizadas')
