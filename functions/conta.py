@@ -86,15 +86,18 @@ def gera_contas(contador: int, thread_id: int, codigoPessoa: str, rand: random.R
         conta_investimento = gera_conta_investimento(contador, rand, perfilCredito)
         return [conta, tipo_conta, conta_investimento]
 
-def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: int, batch_size: int) -> None:
+
+def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: int, batch_size: int, codigos_pessoas: list) -> None:
+    con = pymysql.connect(**con_params)
+    cursor = con.cursor()
     try:
-        con = pymysql.connect(**con_params)
-        cursor = con.cursor()
-
-        progress_bar = tqdm(total=(end - start), desc=f"Thread {thread_id}", position=thread_id)
-        cursor.execute("SELECT DISTINCT codigoPessoa FROM PESSOA")
-        codigos_pessoas = [row[0] for row in cursor.fetchall()]
-
+        progress_bar = tqdm(
+            total=(end - start),
+            desc=f"Thread {thread_id}",
+            position=thread_id,
+            dynamic_ncols=True,
+            leave=False
+        )
         contas_correntes = []
         contas_investimento = []
 
@@ -108,10 +111,12 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
             conta_base = conta[0]  
             tipo = conta[1]        # 'CORRENTE' ou 'INVESTIMENTO'
             dados_tipo = conta[2]  
+            
+            progress_bar.update(1)
 
             cursor.execute("""
-                INSERT INTO IGNORE CONTA
-                (codigoPessoa, agencia, nroConta, senhaConta, rendaMensal, perfilCredito, ativa, dataCriacao)
+                INSERT IGNORE INTO CONTA
+                (codigoPessoa, agencia, nroConta, senhaConta, renda, perfilCredito, ativa, dataCriacao)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, conta_base)
 
@@ -122,7 +127,6 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
             else:
                 contas_investimento.append([idConta] + dados_tipo)
 
-            progress_bar.update(1)
 
         # Scripts de insert
         script_conta_corrente = """INSERT IGNORE INTO CONTACORRENTE
@@ -144,7 +148,7 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
         progress_bar.close()
 
 
-def alimenta_banco_conta_threaded(num_rows: int, con_params: dict, num_threads: int = 5, batch_size: int = 5000) -> None:
+def alimenta_banco_conta_threaded(num_rows: int, con_params: dict, codigos_pessoas: list, num_threads: int = 5,  batch_size: int = 5000) -> None:
     threads = []
     chunk_size = num_rows // num_threads
 
@@ -152,8 +156,8 @@ def alimenta_banco_conta_threaded(num_rows: int, con_params: dict, num_threads: 
         start = i * chunk_size + i
 
         end = (i + 1) * chunk_size + 1 if i != num_threads - 1 else num_rows + 1
-        thread = threading.Thread(target=worker_alimenta_contas, args=(con_params, start, end, i, batch_size))
-        thread.append(thread)
+        thread = threading.Thread(target=worker_alimenta_contas, args=(con_params, start, end, i, batch_size, codigos_pessoas))
+        threads.append(thread)
         thread.start()
 
     for thread in threads:

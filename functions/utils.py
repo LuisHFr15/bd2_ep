@@ -12,7 +12,7 @@ def get_random_seed() -> int:
     seed: int = int(time.time())
     return seed 
 
-def executa_batches(cursor: pymysql.connect.cursor, script: str, dados: list, batch_size: int) -> None:
-    for index in range(0, len(dados), batch_size):
-        batch = dados[index:(index + batch_size)]
+def executa_batches(cursor: pymysql.connect.cursor, script: str, data: list, batch_size: int) -> None:
+    for i in range(0, len(data), batch_size):
+        batch = data[i:i+batch_size]
         cursor.executemany(script, batch)

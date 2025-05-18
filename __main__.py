@@ -50,18 +50,11 @@ try:
     con = pymysql.connect(**con_params)
     # create_database(s3, con)
 
-    
-    print('Alimentando Pessoas')
-    for i in range(30):
-        print('Tentativa:', i)
-        alimenta_banco_pessoa_threaded(50000, con_params, num_threads=5)
-        time.sleep(10)
-
-    for i in range(36):
-        print('Tentativa:', i)
-        alimenta_banco_conta_threaded(50000, con_params, num_threads=5)
-        time.sleep(10)
-    
+    cursor = con.cursor()
+    cursor.execute("SELECT COUNT(*) FROM CONTAINVESTIMENTO")
+    lista = cursor.fetchall()
+    print(lista)
+      
 
 
 except Exception as e:
