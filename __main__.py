@@ -1,9 +1,7 @@
 import pymysql
 import os
 import boto3
-import time
-from functions.pessoa import alimenta_banco_pessoa_threaded
-from functions.conta import alimenta_banco_conta_threaded
+from functions.investimentos import alimenta_banco_ordens_threaded
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,12 +47,16 @@ try:
     }
     con = pymysql.connect(**con_params)
     # create_database(s3, con)
-
     cursor = con.cursor()
-    cursor.execute("SELECT COUNT(*) FROM CONTAINVESTIMENTO")
-    lista = cursor.fetchall()
-    print(lista)
-      
+    cursor.execute("SELECT DISTINCT idInvest FROM ORDEMINVESTIMENTO")
+    query = cursor.fetchall()
+    investimentos = [row[0] for row in query]
+    cursor.execute("SELECT DISTINCT ci.idConta, c.perfilCredito FROM CONTAINVESTIMENTO AS ci INNER JOIN CONTA AS c ON ci.idConta = c.idConta")
+    contas = cursor.fetchall()
+    
+    for i in range(40):
+        print(f'Tentativa {i + 1}')
+        alimenta_banco_ordens_threaded(100000, con_params, contas, investimentos)
 
 
 except Exception as e:

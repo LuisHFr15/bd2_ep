@@ -15,4 +15,18 @@ def get_random_seed() -> int:
 def executa_batches(cursor: pymysql.connect.cursor, script: str, data: list, batch_size: int) -> None:
     for i in range(0, len(data), batch_size):
         batch = data[i:i+batch_size]
-        cursor.executemany(script, batch)
+        tentativas = 3
+
+        while tentativas > 0:
+            try:
+                cursor.executemany(script, batch)
+                break
+
+            except pymysql.err.OperationalError as e:
+                if e.args[0] == 1213:
+                    print('Deadlock detectado, tentando novamente...')
+                    time.sleep(1)
+                    tentativas -= 1
+                    
+                else:
+                    raise

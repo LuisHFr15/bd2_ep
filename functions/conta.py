@@ -59,31 +59,31 @@ def gera_contas(contador: int, thread_id: int, codigoPessoa: str, rand: random.R
     fake = Faker('pt_BR')
 
     agencia = rand.randint(1, 99999)
-    nroConta = rand.randint(1, 999999999)
-    senhaConta = fake.password()
+    nro_conta = rand.randint(1, 999999999)
+    senha_conta = fake.password()
 
 
     if contador % 5 in (0, 1):
-        perfilCredito = 'BAIXO'
+        perfil_credito = 'BAIXO'
         renda = rand.randint(900, 3000)
     elif contador % 5 in (2,3):
-        perfilCredito = 'MEDIO'
+        perfil_credito = 'MEDIO'
         renda = rand.randint(3000, 17000)
     else:
-        perfilCredito = 'ALTO'
+        perfil_credito = 'ALTO'
         renda = rand.randint(17000, 90000)
 
     ativa = 'S' if contador % 10 == 0 else 'N'
-    dataCriacao = datetime.now().strftime('%Y-%m-%d')
+    data_criacao = datetime.now().strftime('%Y-%m-%d')
 
-    conta = [codigoPessoa, agencia, nroConta, senhaConta, renda, perfilCredito, ativa, dataCriacao]
+    conta = [codigoPessoa, agencia, nro_conta, senha_conta, renda, perfil_credito, ativa, data_criacao]
 
     if tipo_conta == 'CORRENTE':
-        conta_corrente = gera_conta_corrente(contador, rand, perfilCredito)
+        conta_corrente = gera_conta_corrente(contador, rand, perfil_credito)
         return [conta, tipo_conta, conta_corrente]
 
     else:
-        conta_investimento = gera_conta_investimento(contador, rand, perfilCredito)
+        conta_investimento = gera_conta_investimento(contador, rand, perfil_credito)
         return [conta, tipo_conta, conta_investimento]
 
 
@@ -105,8 +105,8 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
             seed = get_random_seed()
             rand = random.Random((seed * 1000) + (thread_id + 1000) + (count * 3))
 
-            codigoPessoa = random.choice(codigos_pessoas)
-            conta = gera_contas(count, thread_id, codigoPessoa, rand)
+            codigo_pessoa = random.choice(codigos_pessoas)
+            conta = gera_contas(count, thread_id, codigo_pessoa, rand)
 
             conta_base = conta[0]  
             tipo = conta[1]        # 'CORRENTE' ou 'INVESTIMENTO'
