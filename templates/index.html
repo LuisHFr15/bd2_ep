@@ -182,6 +182,33 @@
         </table>
     </div>
     {% endif %}
+
+    <nav aria-label="Paginação">
+      <ul class="pagination justify-content-center">
+        {% set start = max(1, pagina - 4) %}
+        {% set end = min(start + 8, total_paginas) %}
+        {% if end - start < 9 %}
+          {% set start = max(1, end - 8) %}
+        {% endif %}
+        {% for p in range(start, end + 1) %}
+          <li class="page-item {% if p == pagina %}active{% endif %}">
+            <a class="page-link"
+               href="?aba={{ aba }}&pagina={{ p }}{% if aba == 'pessoa' %}&codigo_pessoa={{ filtro_codigo_pessoa }}&email={{ filtro_email }}{% else %}&codigo_conta={{ filtro_codigo_conta }}&agencia={{ filtro_agencia }}&perfil={{ filtro_perfil }}{% endif %}">
+              {{ p }}
+            </a>
+          </li>
+        {% endfor %}
+        {% if total_paginas > end %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+          <li class="page-item {% if total_paginas == pagina %}active{% endif %}">
+            <a class="page-link"
+               href="?aba={{ aba }}&pagina={{ total_paginas }}{% if aba == 'pessoa' %}&codigo_pessoa={{ filtro_codigo_pessoa }}&email={{ filtro_email }}{% else %}&codigo_conta={{ filtro_codigo_conta }}&agencia={{ filtro_agencia }}&perfil={{ filtro_perfil }}{% endif %}">
+              {{ total_paginas }}
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
 </div>
 </body>
 </html>
