@@ -119,6 +119,32 @@
             </tbody>
         </table>
     </div>
+    <nav aria-label="Paginação">
+      <ul class="pagination justify-content-center">
+        {% set start = max(1, pagina_pessoa - 4) %}
+        {% set end = min(start + 8, total_paginas_pessoa) %}
+        {% if end - start < 9 %}
+          {% set start = max(1, end - 8) %}
+        {% endif %}
+        {% for p in range(start, end + 1) %}
+          <li class="page-item {% if p == pagina_pessoa %}active{% endif %}">
+            <a class="page-link"
+               href="?aba=pessoa&pagina_pessoa={{ p }}&codigo_pessoa={{ filtro_codigo_pessoa }}&email={{ filtro_email }}">
+              {{ p }}
+            </a>
+          </li>
+        {% endfor %}
+        {% if total_paginas_pessoa > end %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+          <li class="page-item {% if total_paginas_pessoa == pagina_pessoa %}active{% endif %}">
+            <a class="page-link"
+               href="?aba=pessoa&pagina_pessoa={{ total_paginas_pessoa }}&codigo_pessoa={{ filtro_codigo_pessoa }}&email={{ filtro_email }}">
+              {{ total_paginas_pessoa }}
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
     {% endif %}
 
     {% if aba == 'conta' %}
@@ -181,34 +207,33 @@
             </tbody>
         </table>
     </div>
-    {% endif %}
-
     <nav aria-label="Paginação">
       <ul class="pagination justify-content-center">
-        {% set start = max(1, pagina - 4) %}
-        {% set end = min(start + 8, total_paginas) %}
+        {% set start = max(1, pagina_conta - 4) %}
+        {% set end = min(start + 8, total_paginas_conta) %}
         {% if end - start < 9 %}
           {% set start = max(1, end - 8) %}
         {% endif %}
         {% for p in range(start, end + 1) %}
-          <li class="page-item {% if p == pagina %}active{% endif %}">
+          <li class="page-item {% if p == pagina_conta %}active{% endif %}">
             <a class="page-link"
-               href="?aba={{ aba }}&pagina={{ p }}{% if aba == 'pessoa' %}&codigo_pessoa={{ filtro_codigo_pessoa }}&email={{ filtro_email }}{% else %}&codigo_conta={{ filtro_codigo_conta }}&agencia={{ filtro_agencia }}&perfil={{ filtro_perfil }}{% endif %}">
+               href="?aba=conta&pagina_conta={{ p }}&codigo_conta={{ filtro_codigo_conta }}&agencia={{ filtro_agencia }}&perfil={{ filtro_perfil }}">
               {{ p }}
             </a>
           </li>
         {% endfor %}
-        {% if total_paginas > end %}
+        {% if total_paginas_conta > end %}
           <li class="page-item disabled"><span class="page-link">...</span></li>
-          <li class="page-item {% if total_paginas == pagina %}active{% endif %}">
+          <li class="page-item {% if total_paginas_conta == pagina_conta %}active{% endif %}">
             <a class="page-link"
-               href="?aba={{ aba }}&pagina={{ total_paginas }}{% if aba == 'pessoa' %}&codigo_pessoa={{ filtro_codigo_pessoa }}&email={{ filtro_email }}{% else %}&codigo_conta={{ filtro_codigo_conta }}&agencia={{ filtro_agencia }}&perfil={{ filtro_perfil }}{% endif %}">
-              {{ total_paginas }}
+               href="?aba=conta&pagina_conta={{ total_paginas_conta }}&codigo_conta={{ filtro_codigo_conta }}&agencia={{ filtro_agencia }}&perfil={{ filtro_perfil }}">
+              {{ total_paginas_conta }}
             </a>
           </li>
         {% endif %}
       </ul>
     </nav>
+    {% endif %}
 </div>
 </body>
 </html>

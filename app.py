@@ -58,20 +58,23 @@ def get_contas(filtro_codigo="", filtro_agencia="", filtro_perfil="", pagina=1):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     aba = request.form.get('aba') if request.method == 'POST' else request.args.get('aba', 'pessoa')
-    pagina = int(request.args.get('pagina', 1))
+    # Página separada para cada aba
+    pagina_pessoa = int(request.args.get('pagina_pessoa', 1))
+    pagina_conta = int(request.args.get('pagina_conta', 1))
 
-    
     # Pessoa
     filtro_codigo_pessoa = request.form.get('codigo_pessoa', "") if request.method == 'POST' else request.args.get('codigo_pessoa', "")
     filtro_email = request.form.get('email', "") if request.method == 'POST' else request.args.get('email', "")
-    pessoas, total_pessoas = get_pessoas(filtro_codigo_pessoa, filtro_email, pagina) if aba == 'pessoa' else ([], 0)
+    pessoas, total_pessoas = get_pessoas(filtro_codigo_pessoa, filtro_email, pagina_pessoa) if aba == 'pessoa' else ([], 0)
     # Conta
     filtro_codigo_conta = request.form.get('codigo_conta', "") if request.method == 'POST' else request.args.get('codigo_conta', "")
     filtro_agencia = request.form.get('agencia', "") if request.method == 'POST' else request.args.get('agencia', "")
     filtro_perfil = request.form.get('perfil', "") if request.method == 'POST' else request.args.get('perfil', "")
-    contas, total_contas = get_contas(filtro_codigo_conta, filtro_agencia, filtro_perfil, pagina) if aba == 'conta' else ([], 0)
-    total_registros = total_pessoas if aba == 'pessoa' else total_contas
-    total_paginas = math.ceil(total_registros / REGISTROS_POR_PAGINA) if total_registros else 1
+    contas, total_contas = get_contas(filtro_codigo_conta, filtro_agencia, filtro_perfil, pagina_conta) if aba == 'conta' else ([], 0)
+
+    total_paginas_pessoa = math.ceil(total_pessoas / REGISTROS_POR_PAGINA) if total_pessoas else 1
+    total_paginas_conta = math.ceil(total_contas / REGISTROS_POR_PAGINA) if total_contas else 1
+
     return render_template(
         'index.html',
         aba=aba,
@@ -82,9 +85,11 @@ def index():
         filtro_codigo_conta=filtro_codigo_conta,
         filtro_agencia=filtro_agencia,
         filtro_perfil=filtro_perfil,
-        pagina=pagina,
-        total_paginas=total_paginas,
-        max =max,
+        pagina_pessoa=pagina_pessoa,
+        pagina_conta=pagina_conta,
+        total_paginas_pessoa=total_paginas_pessoa,
+        total_paginas_conta=total_paginas_conta,
+        max=max,
         min=min
     )
 
