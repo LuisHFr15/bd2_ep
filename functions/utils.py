@@ -30,3 +30,7 @@ def executa_batches(cursor: pymysql.connect.cursor, script: str, data: list, bat
                     
                 else:
                     raise
+
+            except Exception as e:
+                print(e)
+                break

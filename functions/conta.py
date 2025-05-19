@@ -127,19 +127,19 @@ def gera_cartao_credito(contador: int, id_conta: int, perfil_credito: str, nome_
 
 def gera_transacao(contador: int, conta_origem: int, conta_destino: int, id_cartao: int, random: random.Random) -> list:
     fake = Faker('pt_BR')
-    id_transacao = random.randint(1, 999999999999)
     valor_transacao = round(random.uniform(1, 6000), 2)
 
-    if valor_transacao > 3000 or contador % 4 in (0, 1):
+    if valor_transacao > 3000 or contador % 4 in (0, 1) or id_cartao is None:
         tipo_transacao = 'DEBITO'
     else:
         tipo_transacao = 'CREDITO'
 
     data_transacao = fake.date_of_birth(minimum_age=0, maximum_age=5)
+    data_transacao = str(datetime.strftime(data_transacao, '%Y-%m-%d'))
     if tipo_transacao == 'CREDITO':
-        transacao = [id_transacao, conta_origem, conta_destino, id_cartao, tipo_transacao, valor_transacao, data_transacao]
+        transacao = [conta_origem, conta_destino, id_cartao, tipo_transacao, valor_transacao, data_transacao]
     else:
-        transacao = [id_transacao, conta_origem, conta_destino, None, tipo_transacao, valor_transacao, data_transacao]
+        transacao = [conta_origem, conta_destino, None, tipo_transacao, valor_transacao, data_transacao]
 
     return transacao
 
@@ -159,7 +159,7 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
 
         for count in range(start, end):
             seed = get_random_seed()
-            rand = random.Random((seed * 1000) + (thread_id + 1000) + (count * 3))
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * thread_id) ** 2)
 
             codigo_pessoa = random.choice(codigos_pessoas)
             conta = gera_contas(count, thread_id, codigo_pessoa, rand)
@@ -225,7 +225,7 @@ def worker_alimenta_cartao_credito(con_params: dict, start: int, end: int, threa
 
         for count in range(start, end):
             seed = get_random_seed()
-            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * 3))
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * thread_id) ** 2)
 
             conta = random.choice(contas)
             cartao = gera_cartao_credito(count, conta[0], conta[1], conta[2], rand)
@@ -247,9 +247,9 @@ def worker_alimenta_cartao_credito(con_params: dict, start: int, end: int, threa
 
 
 def worker_alimenta_transacao(con_params: dict, start: int, end: int, thread_id: int, batch_size: int, contas: list, cartoes: list) -> None:
-    script_transacao = """INSERT IGNORE INTO TRANSACOES
-                            (idTransacao, contaOrigem, contaDestino, idCartao, tipoTransacao, valorTransacao, dataTransacao)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+    script_transacao = """INSERT INTO TRANSACOES
+                            (contaOrigem, contaDestino, idCartao, tipoTransacao, valorTransacao, dataTransacao)
+                            VALUES (%s, %s, %s, %s, %s, %s)"""
     
     con = pymysql.connect(**con_params)
     cursor = con.cursor()
@@ -267,11 +267,11 @@ def worker_alimenta_transacao(con_params: dict, start: int, end: int, thread_id:
 
         for count in range(start, end):
             seed = get_random_seed()
-            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * 3))
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * thread_id) ** 2)
 
             conta = random.choice(contas)
             cartao = random.choice(cartoes)
-            transacao = gera_transacao(count, conta, cartao[0], cartao[1], rand)
+            transacao = gera_transacao(count, cartao[0], conta, cartao[1], rand)
             transacoes.append(transacao)
 
             progress_bar.update(1)
@@ -296,8 +296,8 @@ def alimenta_banco_conta_threaded(num_rows: int, con_params: dict, codigos_pesso
 
     for i in range(num_threads):
         start = i * chunk_size + i
-
         end = (i + 1) * chunk_size + 1 if i != num_threads - 1 else num_rows + 1
+
         thread = threading.Thread(target=worker_alimenta_contas, args=(con_params, start, end, i, batch_size, codigos_pessoas))
         threads.append(thread)
         thread.start()
@@ -313,8 +313,9 @@ def alimenta_cartao_threaded(num_rows: int, con_params: dict, contas: list, num_
     chunk_size = num_rows // num_threads
 
     for index in range(num_threads):
-        start = (index * chunk_size) + 1
+        start = index * chunk_size + index
         end = (index + 1) * chunk_size + 1 if index != num_threads - 1 else num_rows + 1
+
 
         thread = threading.Thread(target=worker_alimenta_cartao_credito, args=(con_params, start, end, index, batch_size, contas))
         threads.append(thread)
@@ -330,8 +331,9 @@ def alimenta_transacao_threaded(num_rows: int, con_params: dict, contas: list, c
     chunk_size = num_rows // num_threads
 
     for index in range(num_threads):
-        start = (index * chunk_size) + 1
+        start = index * chunk_size + index
         end = (index + 1) * chunk_size + 1 if index != num_threads - 1 else num_rows + 1
+
 
         thread = threading.Thread(target=worker_alimenta_transacao, args=(con_params, start, end, index, batch_size, contas, cartoes))
         threads.append(thread)

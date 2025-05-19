@@ -61,7 +61,7 @@ def worker_alimenta_investimento(con_params: dict, start: int, end: int, thread_
 
         for count in range(start, end):
             seed = get_random_seed()
-            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * 3))
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * thread_id) ** 2)
 
             cnpj = random.choice(codigo_cnpjs)
             investimento = gera_investimento(count, cnpj, rand)
@@ -103,7 +103,7 @@ def worker_alimenta_ordens(con_params: dict, start: int, end: int, thread_id: in
 
         for count in range(start, end):
             seed = get_random_seed()
-            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * 3))
+            rand = random.Random((seed * 1000) + (thread_id * 1000) + (count * thread_id) ** 2)
 
             conta = random.choice(contas)
             investimento = random.choice(investimentos)
@@ -130,7 +130,7 @@ def alimenta_banco_investimento_threaded(num_rows: int, con_params: dict, codigo
     chunk_size = num_rows // num_threads
 
     for index in range(num_threads):
-        start = (index * chunk_size) + 1
+        start = index * chunk_size + index
         end = (index + 1) * chunk_size + 1 if index != num_threads - 1 else num_rows + 1
 
         thread = threading.Thread(target=worker_alimenta_investimento, args=(con_params, start, end, index, batch_size, codigos_cnpjs))
@@ -148,7 +148,7 @@ def alimenta_banco_ordens_threaded(num_rows: int, con_params: dict, contas: list
     chunk_size = num_rows // num_threads
 
     for index in range(num_threads):
-        start = (index * chunk_size) + 1
+        start = index * chunk_size + index
         end = (index + 1) * chunk_size + 1 if index != num_threads - 1 else num_rows + 1
 
         thread = threading.Thread(target=worker_alimenta_ordens, args=(con_params, start, end, index, batch_size, contas, investimentos))

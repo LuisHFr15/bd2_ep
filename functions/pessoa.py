@@ -160,9 +160,9 @@ def alimenta_banco_pessoa_threaded(num_rows: int, con_params: dict, num_threads:
     chunk_size = num_rows // num_threads
 
     for i in range(num_threads):
-        start = i * chunk_size + 1
-
+        start = i * chunk_size + i
         end = (i + 1) * chunk_size + 1 if i != num_threads - 1 else num_rows + 1
+
         t = threading.Thread(target=worker_alimenta_pessoa, args=(con_params, start, end, i, batch_size))
         threads.append(t)
         t.start()
