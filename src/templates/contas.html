@@ -3,8 +3,8 @@
 <h1>Gerenciamento de Contas</h1>
 
 <form method="get" action="/contas">
-  <div class="input-group mb-3">
-    <input type="text" class="form-control" name="busca" placeholder="Buscar por Código de Conta">
+  <div class="input-group mb-5">
+    <input type="text" class="form-control" name="busca_conta" placeholder="Buscar por Código de Conta">
     <button class="btn btn-outline-primary" type="submit">Buscar</button>
   </div>
 </form>
@@ -13,24 +13,32 @@
   <thead>
     <tr>
       <th>ID Conta</th>
+      <th>Tipo de Conta</th>
       <th>CPF/CNPJ</th>
-      <th>Saldo</th>
-      <th>Renda</th>
+      <th>Pessoa</th>
+      <th>Saldo Atual</th>
+      <th>Renda Mensal</th>
       <th>Perf. Crédito</th>
-      <th>Ativo</th>
+      <th>Status da Conta</th>
     </tr>
   </thead>
   <tbody>
     {% for conta in contas %}
     <tr>
       <td>{{ conta.idConta }}</td>
+      <td>{{conta.tipoConta }}</td>
       <td>{{ conta.codigoPessoa }}</td>
+      <td>{{ conta.tipoPessoa }}</td>
       <td>R$ {{ "%.2f"|format(conta.saldo) }}</td>
       <td>R$ {{ "%.2f"|format(conta.renda) }}</td>
       <td>{{ conta.perfilCredito }}</td>
-      <td>{{ "Sim" if conta.ativo == 'S' else "Não" }}</td>
+      <td>{{ "Ativa" if conta.ativo == 'S' else "Inativa" }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<div class="d-flex justify-content-center">
+  <a class="btn btn-primary" href="/contas?page={{ page + 1 }}">Mostrar Mais</a>
+</div>
 {% endblock %}
