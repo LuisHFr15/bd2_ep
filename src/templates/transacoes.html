@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Transações Bancárias</h1>
+
+<form method="get" action="/transacoes">
+  <div class="input-group mb-5">
+    <input type="text" class="form-control" name="busca_transacoes" placeholder="Buscar por Conta de Origem">
+    <button class="btn btn-outline-primary" type="submit">Buscar</button>
+  </div>
+</form>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Conta Origem</th>
+      <th>Conta Destino</th>
+      <th>Tipo</th>
+      <th>Valor</th>
+      <th>Data</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for transacao in transacoes %}
+    <tr>
+      <td>{{ transacao.id }}</td>
+      <td>{{ transacao.origem }}</td>
+      <td>{{ transacao.destino }}</td>
+      <td>{{ transacao.tipo }}</td>
+      <td>R$ {{ "%.2f"|format(transacao.valor) }}</td>
+      <td>{{ transacao.data }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="d-flex justify-content-center">
+  <a class="btn btn-primary" href="/transacoes?page={{ page + 1 }}">Mostrar Mais</a>
+</div>
+{% endblock %}
