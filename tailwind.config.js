@@ -7,12 +7,14 @@ module.exports = {
     "./node_modules/preline/dist/*.js"
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        monda: ["Monda", "sans-serif"]
+      }
+    },
   },
   variants: {
     extend: {},
   },
-  plugins: [
-    require('preline/plugin'),
-  ],
+  plugins: [],
 }

@@ -36,3 +36,13 @@ def render_transacoes(session: boto3.Session) -> render_template:
   return render_template('transacoes.html'
                           ,transacoes=transacoes
                           ,page=page)
+  
+def render_dashboard_investimentos(session: boto3.Session) -> render_template:
+  geral_investimentos = c.levantamento_geral_de_investimentos(session)
+  total_investido = geral_investimentos['total_investido']
+  total_contas = geral_investimentos['total_contas']
+  total_pessoas = geral_investimentos['total_pessoas']
+  
+  return render_template('dashboard.html', total_investido=total_investido
+                         ,total_contas=total_contas, total_pessoas=total_pessoas)
+  

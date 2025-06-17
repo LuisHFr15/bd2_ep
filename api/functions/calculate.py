@@ -160,3 +160,25 @@ def listar_contas_filtrada(session: boto3.Session
     
   return contas
 
+def levantamento_geral_de_investimentos(session: boto3.Session) -> dict:
+  connection = conecta_db(session)
+  cursor = connection.cursor()
+  
+  cursor.execute("SELECT SUM(totalInvestido) FROM INVESTIMENTO WHERE ativo = 'S';")
+  total_dinheiro_investido = cursor.fetchall()
+  
+  cursor.execute("SELECT SUM(totalContas) FROM INVESTIMENTO WHERE ativo = 'S';")
+  total_contas_investindo = cursor.fetchall()
+  
+  cursor.execute("""SELECT COUNT(DISTINCT C.codigoPessoa)
+                 FROM CONTAINVESTIMENTO AS CI INNER JOIN CONTA AS C
+                 ON CI.idConta = C.idConta
+                 WHERE dinheiroInvestido > 0""")
+  total_pessoas_investindo = cursor.fetchall()
+  
+  levantamento_geral = {
+    'total_investido': int(total_dinheiro_investido[0][0] / 1000),
+    'total_contas': total_contas_investindo[0][0],
+    'total_pessoas': total_pessoas_investindo[0][0]
+  }
+  return levantamento_geral

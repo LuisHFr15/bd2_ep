@@ -1,31 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Dashboard Administrativo</h1>
 
-<div class="row">
-  <div class="col-md-4">
-    <div class="card text-white bg-primary mb-3">
-      <div class="card-header">Total Investido</div>
-      <div class="card-body">
-        <h3>R$ {{ total_investido }}</h3>
-      </div>
+<!-- Container principal -->
+<div class="font-monda text-gray-900 bg-gray-50 min-h-screen w-full py-12 px-6">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">
+
+    <!-- Total Investido -->
+    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center hover:shadow-2xl transition-shadow duration-300">
+      <h2 class="text-3xl font-bold text-gray-800 drop-shadow-md mb-4">Total Investido</h2>
+      <p class="text-4xl font-semibold text-green-600">R$ {{ "%.2f"|format(total_investido) }}</p>
     </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card text-white bg-success mb-3">
-      <div class="card-header">Total de Contas</div>
-      <div class="card-body">
-        <h3>{{ total_contas }}</h3>
-      </div>
+
+    <!-- Total de Contas -->
+    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center hover:shadow-2xl transition-shadow duration-300">
+      <h2 class="text-3xl font-bold text-gray-800 drop-shadow-md mb-4">Total de Contas</h2>
+      <p class="text-4xl font-semibold text-blue-600">{{ total_contas }}</p>
     </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card text-white bg-info mb-3">
-      <div class="card-header">Total de Pessoas</div>
-      <div class="card-body">
-        <h3>{{ total_pessoas }}</h3>
-      </div>
+
+    <!-- Total de Pessoas -->
+    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center hover:shadow-2xl transition-shadow duration-300">
+      <h2 class="text-3xl font-bold text-gray-800 drop-shadow-md mb-4">Total de Pessoas</h2>
+      <p class="text-4xl font-semibold text-purple-600">{{ total_pessoas }}</p>
     </div>
+
   </div>
 </div>
+
 {% endblock %}

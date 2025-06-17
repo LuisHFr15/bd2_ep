@@ -1,7 +1,6 @@
 import os
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from functions.utils import conecta_sessao_aws
-from functions import calculate as c
 from functions import controller as ctrl
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -22,13 +21,14 @@ def main() -> render_template:
 def contas() -> render_template:
     return ctrl.render_contas(session)
 
-@dbsysbank.route('/dashboard')
-def dashboard() -> render_template:
-    return render_template('dashboard.html')
-
 @dbsysbank.route('/transacoes')
 def transacoes() -> render_template:
     return ctrl.render_transacoes(session)
-    
+
+@dbsysbank.route('/dashboard')
+def dashboard() -> render_template:
+    return ctrl.render_dashboard_investimentos(session)
+
+
 if __name__ == '__main__':
     dbsysbank.run(debug=True)
