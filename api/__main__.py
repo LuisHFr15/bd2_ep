@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request
 from functions.utils import conecta_sessao_aws
 from functions import calculate as c
+from functions import controller as ctrl
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 static_dir = os.path.join(BASE_DIR, 'src', 'static')
@@ -19,20 +20,7 @@ def main() -> render_template:
 
 @dbsysbank.route('/contas')
 def contas() -> render_template:
-    page = request.args.get('page', default=1, type=int)
-    limit = 50
-    offset = (page - 1) * limit
-    
-    conta_buscada = request.args.get('busca_conta')
-    if conta_buscada:
-        contas = c.listar_contas_filtrada(session
-                                        ,conta=conta_buscada
-                                        ,offset=offset)
-    else:
-        contas = c.listar_todas_contas(session
-                                    ,offset=offset)
-        
-    return render_template('contas.html', contas=contas, page=page)
+    return ctrl.render_contas(session)
 
 @dbsysbank.route('/dashboard')
 def dashboard() -> render_template:
@@ -40,23 +28,7 @@ def dashboard() -> render_template:
 
 @dbsysbank.route('/transacoes')
 def transacoes() -> render_template:
-    page = request.args.get('page', default=1, type=int)
-    limit = 50
-    offset = (page - 1) * limit
-    
-    conta_origem = request.args.get('busca_transacoes')
-    
-    if conta_origem:
-        transacoes = c.listar_transacoes_filtradas(session
-                                                ,conta_origem=conta_origem
-                                               ,offset=offset)
-    
-    else:
-        transacoes = c.listar_todas_transacoes(session
-                                            ,offset=offset)
-    return render_template('transacoes.html'
-                           ,transacoes=transacoes
-                           ,page=page)
+    return ctrl.render_transacoes(session)
     
 if __name__ == '__main__':
     dbsysbank.run(debug=True)
