@@ -80,3 +80,14 @@ def conecta_db(session: boto3.Session) -> pymysql.connect:
     con = pymysql.connect(**con_params)
     
     return con
+
+def formatar_compacto(valor: float) -> str:
+    if valor >= 1_000_000_000:
+        return f"{valor / 1_000_000_000:.1f}B"
+    elif valor >= 1_000_000:
+        return f"{valor / 1_000_000:.1f}M"
+    elif valor >= 1_000:
+        return f"{valor / 1_000:.1f}K"
+    else:
+        return f"{valor:.0f}"
+

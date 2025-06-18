@@ -21,6 +21,7 @@
     "tailwindcss": "^4.1.10"
   },
   "dependencies": {
+    "apexcharts": "^4.7.0",
     "preline": "^3.1.0",
     "tailwindcss-cli": "^0.1.2"
   }

@@ -1,8 +1,7 @@
-import boto3
+import boto3, pymysql
 from functions.utils import conecta_db
 
-def listar_todas_transacoes(session: boto3.Session, offset: int = 0) -> list:
-  connection = conecta_db(session)
+def listar_todas_transacoes(connection: pymysql.connect, offset: int = 0) -> list:
   cursor = connection.cursor()
 
     
@@ -31,10 +30,9 @@ def listar_todas_transacoes(session: boto3.Session, offset: int = 0) -> list:
     
   return transacoes
 
-def listar_transacoes_filtradas(session: boto3.Session
+def listar_transacoes_filtradas(connection: pymysql.connect
                                 ,conta_origem: str
                                 ,offset: int = 0) -> list:
-  connection = conecta_db(session)
   cursor = connection.cursor()
   query = """SELECT idTransacao, contaOrigem, contaDestino
                   , tipoTransacao, valorTransacao, dataTransacao
@@ -62,8 +60,7 @@ def listar_transacoes_filtradas(session: boto3.Session
     
   return transacoes
 
-def listar_todas_contas(session: boto3.Session, offset: int = 0) -> list:
-  connection = conecta_db(session)
+def listar_todas_contas(connection: pymysql.connect, offset: int = 0) -> list:
   cursor = connection.cursor()
 
   query = """SELECT c.idConta
@@ -109,10 +106,9 @@ def listar_todas_contas(session: boto3.Session, offset: int = 0) -> list:
     
   return contas
 
-def listar_contas_filtrada(session: boto3.Session
+def listar_contas_filtrada(connection: pymysql.connect
                            ,conta: str
                            ,offset: int = 0) -> list:
-  connection = conecta_db(session)
   cursor = connection.cursor()
 
   query = """SELECT c.idConta
@@ -160,8 +156,7 @@ def listar_contas_filtrada(session: boto3.Session
     
   return contas
 
-def levantamento_geral_de_investimentos(session: boto3.Session) -> dict:
-  connection = conecta_db(session)
+def levantamento_geral_de_investimentos(connection: pymysql.connect) -> dict:
   cursor = connection.cursor()
   
   cursor.execute("SELECT SUM(totalInvestido) FROM INVESTIMENTO WHERE ativo = 'S';")
@@ -182,3 +177,66 @@ def levantamento_geral_de_investimentos(session: boto3.Session) -> dict:
     'total_pessoas': total_pessoas_investindo[0][0]
   }
   return levantamento_geral
+
+def contar_tipos_contas(connection: pymysql.connect) -> tuple:
+    cursor = connection.cursor()
+    query = """
+        SELECT
+            SUM(CASE WHEN cc.idConta IS NOT NULL THEN 1 ELSE 0 END) AS corrente,
+            SUM(CASE WHEN ci.idConta IS NOT NULL THEN 1 ELSE 0 END) AS investimento
+        FROM CONTA c
+        LEFT JOIN CONTACORRENTE cc ON c.idConta = cc.idConta
+        LEFT JOIN CONTAINVESTIMENTO ci ON c.idConta = ci.idConta
+    """
+    cursor.execute(query)
+    resultado = cursor.fetchone()
+    return resultado[0], resultado[1]
+
+def rendimento_por_mes(connection: pymysql.connect) -> tuple:
+    cursor = connection.cursor()
+    
+    query = """
+        SELECT 
+          DATE_FORMAT(dataInvest, '%Y-%m') AS mes,
+          SUM(oi.quantiaInvest) AS total_investido,
+          AVG(i.rendMedioMes) AS media_rendimento
+      FROM ORDEMINVESTIMENTO oi
+      JOIN INVESTIMENTO i ON oi.idInvest = i.idInvest
+      WHERE dataInvest >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+      GROUP BY mes
+      ORDER BY mes ASC
+    """
+    cursor.execute(query)
+    resultados = cursor.fetchall()
+
+    datas = []
+    rendimentos_acumulados = []
+    valor_acumulado = 0.0
+
+    for row in resultados:
+        mes, investido_no_mes, rendimento_mensal = row
+        valor_acumulado += (investido_no_mes / 1000)
+        valor_acumulado *= (1 + (rendimento_mensal / 100))
+        datas.append(mes)
+        rendimentos_acumulados.append(round(valor_acumulado, 2))
+
+    return datas, rendimentos_acumulados
+
+
+def ultimas_transacoes(connection: pymysql.connect) -> list:
+    cursor = connection.cursor()
+    query = """
+        SELECT idTransacao, contaOrigem, contaDestino, valorTransacao, dataTransacao
+        FROM TRANSACOES
+        ORDER BY dataTransacao DESC
+        LIMIT 5
+    """
+    cursor.execute(query)
+    dados = cursor.fetchall()
+    return [{
+        'id': row[0],
+        'origem': row[1],
+        'destino': row[2],
+        'valor': row[3],
+        'data': row[4]
+    } for row in dados]

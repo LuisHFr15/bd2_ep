@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Monda:wght@400..700&display=swap');
 
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Red+Rose:wght@300..700&display=swap');
+
 /*! tailwindcss v2.2.19 | MIT License | https://tailwindcss.com */
 
 /*! modern-normalize v1.1.0 | MIT License | https://github.com/sindresorhus/modern-normalize */
@@ -22323,6 +22327,14 @@ video {
 
 .font-monda{
   font-family: Monda, sans-serif;
+}
+
+.font-montserrat{
+  font-family: Montserrat, sans-serif;
+}
+
+.font-red-rose{
+  font-family: Red Rose, serif;
 }
 
 .text-xs{
@@ -52931,6 +52943,14 @@ video {
     font-family: Monda, sans-serif;
   }
 
+  .sm\:font-montserrat{
+    font-family: Montserrat, sans-serif;
+  }
+
+  .sm\:font-red-rose{
+    font-family: Red Rose, serif;
+  }
+
   .sm\:text-xs{
     font-size: 0.75rem;
     line-height: 1rem;
@@ -83183,6 +83203,14 @@ video {
 
   .md\:font-monda{
     font-family: Monda, sans-serif;
+  }
+
+  .md\:font-montserrat{
+    font-family: Montserrat, sans-serif;
+  }
+
+  .md\:font-red-rose{
+    font-family: Red Rose, serif;
   }
 
   .md\:text-xs{
@@ -113439,6 +113467,14 @@ video {
     font-family: Monda, sans-serif;
   }
 
+  .lg\:font-montserrat{
+    font-family: Montserrat, sans-serif;
+  }
+
+  .lg\:font-red-rose{
+    font-family: Red Rose, serif;
+  }
+
   .lg\:text-xs{
     font-size: 0.75rem;
     line-height: 1rem;
@@ -143693,6 +143729,14 @@ video {
     font-family: Monda, sans-serif;
   }
 
+  .xl\:font-montserrat{
+    font-family: Montserrat, sans-serif;
+  }
+
+  .xl\:font-red-rose{
+    font-family: Red Rose, serif;
+  }
+
   .xl\:text-xs{
     font-size: 0.75rem;
     line-height: 1rem;
@@ -173945,6 +173989,14 @@ video {
 
   .\32xl\:font-monda{
     font-family: Monda, sans-serif;
+  }
+
+  .\32xl\:font-montserrat{
+    font-family: Montserrat, sans-serif;
+  }
+
+  .\32xl\:font-red-rose{
+    font-family: Red Rose, serif;
   }
 
   .\32xl\:text-xs{

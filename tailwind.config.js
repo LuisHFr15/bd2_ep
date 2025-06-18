@@ -9,7 +9,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        monda: ["Monda", "sans-serif"]
+        "monda": ["Monda", "sans-serif"],
+        "montserrat": ["Montserrat", "sans-serif"],
+        "red-rose": ["Red Rose", "serif"]
       }
     },
   },

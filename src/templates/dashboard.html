@@ -1,29 +1,127 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="dont-montserrat container mx-auto p-6 space-y-8">
 
-<!-- Container principal -->
-<div class="font-monda text-gray-900 bg-gray-50 min-h-screen w-full py-12 px-6">
-  <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">
-
-    <!-- Total Investido -->
-    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center hover:shadow-2xl transition-shadow duration-300">
-      <h2 class="text-3xl font-bold text-gray-800 drop-shadow-md mb-4">Total Investido</h2>
-      <p class="text-4xl font-semibold text-green-600">R$ {{ "%.2f"|format(total_investido) }}</p>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h2 class="text-2xl font-bold text-gray-700 shadow-sm">Total Investido</h2>
+      <p class="font-red-rose text-4xl font-semibold text-green-600 mt-4">R$ {{ total_investido | compacto }}</p>
     </div>
 
-    <!-- Total de Contas -->
-    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center hover:shadow-2xl transition-shadow duration-300">
-      <h2 class="text-3xl font-bold text-gray-800 drop-shadow-md mb-4">Total de Contas</h2>
-      <p class="text-4xl font-semibold text-blue-600">{{ total_contas }}</p>
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h2 class="text-2xl font-bold text-gray-700 shadow-sm">Total de Contas</h2>
+      <p class="font-red-rose text-4xl font-semibold text-blue-500 mt-4">{{ total_contas | compacto }}</p>
     </div>
 
-    <!-- Total de Pessoas -->
-    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center hover:shadow-2xl transition-shadow duration-300">
-      <h2 class="text-3xl font-bold text-gray-800 drop-shadow-md mb-4">Total de Pessoas</h2>
-      <p class="text-4xl font-semibold text-purple-600">{{ total_pessoas }}</p>
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h2 class="text-2xl font-bold text-gray-700 shadow-sm">Total de Pessoas</h2>
+      <p class="font-red-rose text-4xl font-semibold text-purple-500 mt-4">{{ total_pessoas | compacto }}</p>
     </div>
-
   </div>
+
+  <div class="bg-white rounded-2xl shadow-lg p-6">
+    <h2 class="text-xl font-bold text-gray-700 mb-4 shadow-sm">Previsão de Rendimento dos Investimentos dos Últimos 12 Meses</h2>
+    <div id="graficoRendimento" class="w-full max-w-4xl h-96 mx-auto"></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-lg p-6">
+    <h2 class="text-xl font-bold text-gray-700 mb-4 shadow-sm">Últimas Transações</h2>
+    <div class="overflow-x-auto">
+      <table class="table-auto w-full text-left text-sm text-gray-600">
+        <thead class="bg-gray-100 text-xs uppercase text-gray-700">
+          <tr>
+            <th class="px-4 py-2">ID</th>
+            <th class="px-4 py-2">Origem</th>
+            <th class="px-4 py-2">Destino</th>
+            <th class="px-4 py-2">Tipo</th>
+            <th class="px-4 py-2">Valor</th>
+            <th class="px-4 py-2">Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for trans in ultimas_transacoes %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-2">{{ trans.id }}</td>
+            <td class="px-4 py-2">{{ trans.origem }}</td>
+            <td class="px-4 py-2">{{ trans.destino }}</td>
+            <td class="px-4 py-2">{{ trans.tipo }}</td>
+            <td class="px-4 py-2">R$ {{ "%.2f"|format(trans.valor) }}</td>
+            <td class="px-4 py-2">{{ trans.data }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+  const options = {
+    chart: {
+      type: 'area',
+      height: 380,
+      toolbar: {
+        show: false
+      }
+    },
+    series: [{
+      name: 'Rendimento Acumulado',
+      data: {{ rendimentos | default([]) | tojson }}
+    }],
+    xaxis: {
+      categories: {{ datas | default([]) | tojson }},
+      title: {
+        text: 'Mês'
+      }
+    },
+    yaxis: {
+      title: {
+        text: 'R$'
+      },
+      labels: {
+        formatter: function (value) {
+          if (value >= 1_000_000_000) return 'R$ ' + (value / 1_000_000_000).toFixed(1) + 'B';
+          if (value >= 1_000_000) return 'R$ ' + (value / 1_000_000).toFixed(1) + 'M';
+          if (value >= 1_000) return 'R$ ' + (value / 1_000).toFixed(1) + 'K';
+          return 'R$ ' + value.toFixed(2);
+        }
+      }
+    },
+    tooltip: {
+      y: {
+        formatter: function (value) {
+          if (value >= 1_000_000_000) return 'R$ ' + (value / 1_000_000_000).toFixed(1) + 'B';
+          if (value >= 1_000_000) return 'R$ ' + (value / 1_000_000).toFixed(1) + 'M';
+          if (value >= 1_000) return 'R$ ' + (value / 1_000).toFixed(1) + 'K';
+          return 'R$ ' + value.toFixed(2);
+        }
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: function(value) {
+        if (value >= 1_000_000_000) return (value / 1_000_000_000).toFixed(1) + 'B';
+        if (value >= 1_000_000) return (value / 1_000_000).toFixed(1) + 'M';
+        if (value >= 1_000) return (value / 1_000).toFixed(1) + 'K';
+        return value.toFixed(0);
+      },
+      style: {
+        colors: ['#ffffff']  // texto branco (para contraste com fundo verde)
+      },
+      background: {
+        enabled: true,
+        foreColor: '#22c55e', // cor verde do background do rótulo
+        borderRadius: 4,
+        padding: 4,
+        opacity: 0.9,
+      }
+    },
+    colors: ['#22c55e']
+  };
+
+  const chart = new ApexCharts(document.querySelector("#graficoRendimento"), options);
+  chart.render();
+</script>
 {% endblock %}

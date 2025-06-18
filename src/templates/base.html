@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
+    <link rel="stylesheet" href="./assets/vendor/apexcharts/dist/apexcharts.css">
+  </head>
 <body>
-<script src="{{ url_for('static', filename='js/preline.js') }}"></script>
 <nav class="w-auto bg-gray-800 text-white py-6">
   <div class="flex justify-between mx-8 font-monda">
     <a class="navbar-brand" href="/">DBSysBank</a>
@@ -27,5 +27,9 @@
   {% block content %}{% endblock %}
 </div>
 
+<script src="{{ url_for('static', filename='js/preline.js') }}"></script>
+<script src="./assets/vendor/lodash/lodash.min.js"></script>
+<script src="./assets/vendor/apexcharts/dist/apexcharts.min.js"></script>
+<script src="./assets/vendor/preline/dist/helper-apexcharts.js"></script>
 </body>
 </html>
