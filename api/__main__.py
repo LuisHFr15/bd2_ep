@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template
-from functions.utils import conecta_sessao_aws, conecta_db, formatar_compacto
+from functions.utils import conecta_sessao_aws, formatar_compacto
 from functions import controller as ctrl
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -14,7 +14,6 @@ dbsysbank.jinja_env.filters['compacto'] = formatar_compacto
 
 
 session = conecta_sessao_aws()
-connection = conecta_db(session)
 
 @dbsysbank.route('/')
 def main() -> render_template:
@@ -22,15 +21,15 @@ def main() -> render_template:
 
 @dbsysbank.route('/contas')
 def contas() -> render_template:
-    return ctrl.render_contas(connection)
+    return ctrl.render_contas(session)
 
 @dbsysbank.route('/transacoes')
 def transacoes() -> render_template:
-    return ctrl.render_transacoes(connection)
+    return ctrl.render_transacoes(session)
 
 @dbsysbank.route('/dashboard')
 def dashboard() -> render_template:
-    return ctrl.render_dashboard_investimentos(connection)
+    return ctrl.render_dashboard_investimentos(session)
 
 
 if __name__ == '__main__':

@@ -223,20 +223,19 @@ def rendimento_por_mes(connection: pymysql.connect) -> tuple:
     return datas, rendimentos_acumulados
 
 
-def ultimas_transacoes(connection: pymysql.connect) -> list:
+def ultimas_ordens(connection: pymysql.connect) -> list:
     cursor = connection.cursor()
     query = """
-        SELECT idTransacao, contaOrigem, contaDestino, valorTransacao, dataTransacao
-        FROM TRANSACOES
-        ORDER BY dataTransacao DESC
-        LIMIT 5
+        SELECT idConta, idInvest, quantiaInvest, dataInvest
+        FROM ORDEMINVESTIMENTO
+        ORDER BY dataInvest DESC
+        LIMIT 10
     """
     cursor.execute(query)
     dados = cursor.fetchall()
     return [{
-        'id': row[0],
-        'origem': row[1],
-        'destino': row[2],
-        'valor': row[3],
-        'data': row[4]
+        'conta': row[0],
+        'investimento': row[1],
+        'quantia': row[2],
+        'data': row[3]
     } for row in dados]

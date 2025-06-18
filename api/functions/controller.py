@@ -1,8 +1,10 @@
 import boto3, pymysql
 from flask import render_template, request
 from functions import calculate as c
+from functions.utils import conecta_db
 
-def render_contas(connection: pymysql.connect) -> render_template:
+def render_contas(session: boto3.Session) -> render_template:
+  connection = conecta_db(session)
   page = request.args.get('page', default=1, type=int)
   limit = 50
   offset = (page - 1) * limit
@@ -18,7 +20,8 @@ def render_contas(connection: pymysql.connect) -> render_template:
       
   return render_template('contas.html', contas=contas, page=page)
 
-def render_transacoes(connection: pymysql.connect) -> render_template:
+def render_transacoes(session: boto3.Session) -> render_template:
+  connection = conecta_db(session)
   page = request.args.get('page', default=1, type=int)
   limit = 50
   offset = (page - 1) * limit
@@ -37,18 +40,19 @@ def render_transacoes(connection: pymysql.connect) -> render_template:
                           ,transacoes=transacoes
                           ,page=page)
   
-def render_dashboard_investimentos(connection: pymysql.connect) -> render_template:
+def render_dashboard_investimentos(session: boto3.Session) -> render_template:
+  connection = conecta_db(session)
   geral_investimentos = c.levantamento_geral_de_investimentos(connection)
   total_investido = geral_investimentos['total_investido']
   total_contas = geral_investimentos['total_contas']
   total_pessoas = geral_investimentos['total_pessoas']
   corrente, investimento = c.contar_tipos_contas(connection)
   datas, rendimentos = c.rendimento_por_mes(connection)
-  transacoes = c.ultimas_transacoes(connection)
+  ordens = c.ultimas_ordens(connection)
   
   return render_template('dashboard.html', total_investido=total_investido
                          ,total_contas=total_contas, total_pessoas=total_pessoas
                          ,corrente=corrente, investimento=investimento
                          ,datas=datas, rendimentos=rendimentos
-                         ,ultimas_transacoes=transacoes)
+                         ,ultimas_ordens=ordens)
   
