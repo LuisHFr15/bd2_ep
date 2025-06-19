@@ -36,18 +36,18 @@
   <div class="bg-white rounded-2xl shadow-lg p-6">
     <h2 class="text-xl font-bold text-gray-700 mb-4 shadow-sm">Últimas Ordens de Investimentos</h2>
     <div class="overflow-x-auto">
-      <table class="table-auto w-full text-left text-sm text-gray-600">
+      <table class="table-auto w-full text-sm text-gray-600">
         <thead class="bg-gray-100 text-xs uppercase text-gray-700">
           <tr>
-            <th class="px-4 py-2">Conta</th>
-            <th class="px-4 py-2">Investimento</th>
-            <th class="px-4 py-2">Quantia Investida</th>
-            <th class="px-4 py-2">Data</th>
+            <th class="px-4 py-2 text-center">Conta</th>
+            <th class="px-4 py-2 text-center">Investimento</th>
+            <th class="px-4 py-2 text-center">Quantia Investida</th>
+            <th class="px-4 py-2 text-center">Data</th>
           </tr>
         </thead>
         <tbody>
           {% for ordem in ultimas_ordens %}
-          <tr class="border-b hover:bg-gray-50">
+          <tr class="border-b hover:bg-gray-50 text-center">
             <td class="px-4 py-2">{{ ordem.conta }}</td>
             <td class="px-4 py-2">{{ ordem.investimento }}</td>
             <td class="px-4 py-2">R$ {{ "%.2f"|format(ordem.quantia) }}</td>

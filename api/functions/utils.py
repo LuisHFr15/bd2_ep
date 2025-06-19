@@ -5,7 +5,7 @@ import boto3
 import json
 from dotenv import load_dotenv
 
-load_dotenv
+load_dotenv()
 
 def execute_script(script: str, cursor: pymysql.connect.cursor) -> None:
     for command in script.split(';'):

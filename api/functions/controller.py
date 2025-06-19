@@ -1,4 +1,4 @@
-import boto3, pymysql
+import boto3
 from flask import render_template, request
 from functions import calculate as c
 from functions.utils import conecta_db

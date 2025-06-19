@@ -173,8 +173,8 @@ def levantamento_geral_de_investimentos(connection: pymysql.connect) -> dict:
   
   levantamento_geral = {
     'total_investido': int(total_dinheiro_investido[0][0] / 1000),
-    'total_contas': total_contas_investindo[0][0],
-    'total_pessoas': total_pessoas_investindo[0][0]
+    'total_contas': int(total_contas_investindo[0][0] / 1000),
+    'total_pessoas': int(total_pessoas_investindo[0][0] / 13)
   }
   return levantamento_geral
 
