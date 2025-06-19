@@ -47,8 +47,9 @@ def render_dashboard_investimentos(session: boto3.Session) -> render_template:
   total_contas = geral_investimentos['total_contas']
   total_pessoas = geral_investimentos['total_pessoas']
   corrente, investimento = c.contar_tipos_contas(connection)
-  datas, rendimentos = c.rendimento_por_mes(connection)
   ordens = c.ultimas_ordens(connection)
+  tipo_renda_grafico = request.args.get('tipoInvestimento', 'AMBOS')
+  datas, rendimentos = c.rendimento_por_mes(connection, tipo_renda_grafico)
   
   return render_template('dashboard.html', total_investido=total_investido
                          ,total_contas=total_contas, total_pessoas=total_pessoas

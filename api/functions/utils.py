@@ -66,6 +66,8 @@ def conecta_db(session: boto3.Session) -> pymysql.connect:
 
     db_user = db_login['username']
     db_password = db_login['password']
+    print(db_user)
+    print(db_password)
     con_params = {
             'host': db_endpoint,
             'port': db_port,

@@ -192,21 +192,38 @@ def contar_tipos_contas(connection: pymysql.connect) -> tuple:
     resultado = cursor.fetchone()
     return resultado[0], resultado[1]
 
-def rendimento_por_mes(connection: pymysql.connect) -> tuple:
+def rendimento_por_mes(connection: pymysql.connect,
+                       tipo_investimento: str = 'AMBOS') -> tuple:
     cursor = connection.cursor()
     
-    query = """
-        SELECT 
-          DATE_FORMAT(dataInvest, '%Y-%m') AS mes,
-          SUM(oi.quantiaInvest) AS total_investido,
-          AVG(i.rendMedioMes) AS media_rendimento
-      FROM ORDEMINVESTIMENTO oi
-      JOIN INVESTIMENTO i ON oi.idInvest = i.idInvest
-      WHERE dataInvest >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-      GROUP BY mes
-      ORDER BY mes ASC
-    """
-    cursor.execute(query)
+    if tipo_investimento not in ('FIXA', 'VARIAVEL'):
+      query = """
+          SELECT 
+            DATE_FORMAT(dataInvest, '%Y-%m') AS mes,
+            SUM(oi.quantiaInvest) AS total_investido,
+            AVG(i.rendMedioMes) AS media_rendimento
+        FROM ORDEMINVESTIMENTO oi
+        JOIN INVESTIMENTO i ON oi.idInvest = i.idInvest
+        WHERE dataInvest >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+        GROUP BY mes
+        ORDER BY mes ASC
+      """
+      cursor.execute(query)
+    else:
+      query = """
+          SELECT 
+            DATE_FORMAT(dataInvest, '%%Y-%%m') AS mes,
+            SUM(oi.quantiaInvest) AS total_investido,
+            AVG(i.rendMedioMes) AS media_rendimento
+        FROM ORDEMINVESTIMENTO oi
+        JOIN INVESTIMENTO i ON oi.idInvest = i.idInvest
+        WHERE dataInvest >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+          AND i.tipoRenda = %s
+        GROUP BY mes
+        ORDER BY mes ASC
+      """
+      cursor.execute(query, tipo_investimento)
+      
     resultados = cursor.fetchall()
 
     datas = []
@@ -215,8 +232,8 @@ def rendimento_por_mes(connection: pymysql.connect) -> tuple:
 
     for row in resultados:
         mes, investido_no_mes, rendimento_mensal = row
-        valor_acumulado += (investido_no_mes / 1000)
         valor_acumulado *= (1 + (rendimento_mensal / 100))
+        valor_acumulado += (investido_no_mes / 1000)
         datas.append(mes)
         rendimentos_acumulados.append(round(valor_acumulado, 2))
 
