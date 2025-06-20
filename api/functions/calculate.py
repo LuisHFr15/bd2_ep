@@ -60,102 +60,75 @@ def listar_transacoes_filtradas(connection: pymysql.connect
     
   return transacoes
 
-def listar_todas_contas(connection: pymysql.connect, offset: int = 0) -> list:
-  cursor = connection.cursor()
+def listar_todas_contas(connection, offset=0, limit=50):
+    cursor = connection.cursor()
+    query = """
+        SELECT
+            c.idConta,
+            CASE
+                WHEN cc.idConta IS NOT NULL THEN 'CORRENTE'
+                WHEN ci.idConta IS NOT NULL THEN 'INVESTIMENTO'
+                ELSE 'DESCONHECIDO'
+            END AS tipoConta,
+            c.codigoPessoa,
+            p.tipoCodigo AS tipoPessoa,
+            COALESCE(cc.saldoConta, ci.saldoCINvest, 0) AS saldo,
+            c.renda AS renda,
+            c.perfilCredito,
+            c.ativa,
+            DATE_FORMAT(c.dataCriacao, '%%d/%%m/%%Y') AS dataAbertura,
+            (
+                SELECT COUNT(*)
+                FROM TRANSACOES t
+                WHERE t.contaOrigem = c.idConta
+                  AND t.dataTransacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            ) AS tx_mes
+        FROM CONTA c
+        LEFT JOIN CONTACORRENTE cc ON cc.idConta = c.idConta
+        LEFT JOIN CONTAINVESTIMENTO ci ON ci.idConta = c.idConta
+        LEFT JOIN PESSOA p ON p.codigoPessoa = c.codigoPessoa
+        ORDER BY c.idConta
+        LIMIT %s OFFSET %s
+    """
+    cursor.execute(query, (limit, offset))
+    cols = ['idConta','tipoConta','codigoPessoa','tipoPessoa','saldo','renda',
+            'perfilCredito','ativa','dataAbertura','tx_mes']
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
-  query = """SELECT c.idConta
-  , CASE WHEN cc.saldoConta IS NULL THEN 'Investimento'
-    ELSE 'Corrente'
-    END AS tipoConta
-  , c.codigoPessoa
-  , CASE WHEN p.tipoCodigo = 'J' THEN 'Jurídica'
-    ELSE 'Física'
-    END AS tipoPessoa
-  , CASE WHEN cc.saldoConta IS NULL THEN ci.saldoCINvest
-    ELSE cc.saldoConta
-    END AS saldoAtual
-  , c.renda
-  , c.perfilCredito
-  , c.ativa
-  FROM CONTA AS c LEFT JOIN PESSOA AS p
-    ON c.codigoPessoa = p.codigoPessoa
-  LEFT JOIN CONTACORRENTE AS cc
-    ON c.idConta = cc.idConta
-  LEFT JOIN CONTAINVESTIMENTO AS ci
-    ON c.idConta = ci.idConta
-    
-  LIMIT 10 OFFSET %s"""
-  cursor.execute(query, offset)
+def listar_contas_filtrada(connection, conta, offset=0, limit=50):
+    cursor = connection.cursor()
+    query = """
+        SELECT
+            c.idConta,
+            CASE WHEN cc.idConta IS NOT NULL THEN 'CORRENTE'
+                 WHEN ci.idConta IS NOT NULL THEN 'INVESTIMENTO'
+                 ELSE 'DESCONHECIDO' END AS tipoConta,
+            c.codigoPessoa,
+            p.tipoCodigo AS tipoPessoa,
+            COALESCE(cc.saldoConta, ci.saldoCINvest, 0) AS saldo,
+            c.renda AS renda,
+            c.perfilCredito,
+            c.ativa,
+            DATE_FORMAT(c.dataCriacao, '%%d/%%m/%%Y') AS dataAbertura,
+            (
+                SELECT COUNT(*)
+                FROM TRANSACOES t
+                WHERE t.contaOrigem = c.idConta
+                  AND t.dataTransacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            ) AS tx_mes
+        FROM CONTA c
+        LEFT JOIN CONTACORRENTE cc ON cc.idConta = c.idConta
+        LEFT JOIN CONTAINVESTIMENTO ci ON ci.idConta = c.idConta
+        LEFT JOIN PESSOA p ON p.codigoPessoa = c.codigoPessoa
+        WHERE c.idConta = %s
+        ORDER BY c.idConta
+        LIMIT %s OFFSET %s
+    """
+    cursor.execute(query, (conta, limit, offset))
+    cols = ['idConta','tipoConta','codigoPessoa','tipoPessoa','saldo','renda',
+            'perfilCredito','ativa','dataAbertura','tx_mes']
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
   
-  response = cursor.fetchall()
-  connection.close()
-  contas = []
-  for row in response:
-    if len(row) < 8:
-      continue
-    contas.append({
-      'idConta': row[0],
-      'tipoConta': row[1],
-      'codigoPessoa': row[2],
-      'tipoPessoa': row[3],
-      'saldo': row[4],
-      'renda': row[5],
-      'perfilCredito': row[6],
-      'ativo': row[7]
-    })
-    
-  return contas
-
-def listar_contas_filtrada(connection: pymysql.connect
-                           ,conta: str
-                           ,offset: int = 0) -> list:
-  cursor = connection.cursor()
-
-  query = """SELECT c.idConta
-  , CASE WHEN cc.saldoConta IS NULL THEN 'Investimento'
-    ELSE 'Corrente'
-    END AS tipoConta
-  , c.codigoPessoa
-  , CASE WHEN p.tipoCodigo = 'J' THEN 'Jurídica'
-    ELSE 'Física'
-    END AS tipoPessoa
-  , CASE WHEN cc.saldoConta IS NULL THEN ci.saldoCINvest
-    ELSE cc.saldoConta
-    END AS saldoAtual
-  , c.renda
-  , c.perfilCredito
-  , c.ativa
-  FROM CONTA AS c LEFT JOIN PESSOA AS p
-    ON c.codigoPessoa = p.codigoPessoa
-  LEFT JOIN CONTACORRENTE AS cc
-    ON c.idConta = cc.idConta
-  LEFT JOIN CONTAINVESTIMENTO AS ci
-    ON c.idConta = ci.idConta
-    
-  WHERE c.idConta = %s
-  LIMIT 10 OFFSET %s"""
-  cursor.execute(query, (conta, offset))
-  
-  response = cursor.fetchall()
-  connection.close()
-  
-  contas = []
-  for row in response:
-    if len(row) < 8:
-      continue
-    contas.append({
-      'idConta': row[0],
-      'tipoConta': row[1],
-      'codigoPessoa': row[2],
-      'tipoPessoa': row[3],
-      'saldo': row[4],
-      'renda': row[5],
-      'perfilCredito': row[6],
-      'ativo': row[7]
-    })
-    
-  return contas
-
 def levantamento_geral_de_investimentos(connection: pymysql.connect) -> dict:
   cursor = connection.cursor()
   
@@ -239,7 +212,6 @@ def rendimento_por_mes(connection: pymysql.connect,
 
     return datas, rendimentos_acumulados
 
-
 def ultimas_ordens(connection: pymysql.connect) -> list:
     cursor = connection.cursor()
     query = """
@@ -256,3 +228,69 @@ def ultimas_ordens(connection: pymysql.connect) -> list:
         'quantia': row[2],
         'data': row[3]
     } for row in dados]
+
+def indicadores_contas(connection):
+    cursor = connection.cursor()
+    query = """
+        SELECT
+          COUNT(*) AS total,
+          SUM(CASE WHEN ativa='S' THEN 1 ELSE 0 END) AS ativas,
+          SUM(CASE WHEN ativa='N' THEN 1 ELSE 0 END) AS inativas,
+          SUM(COALESCE(cc.saldoConta, ci.saldoCINvest, 0)) AS saldo_total
+        FROM CONTA c
+        LEFT JOIN CONTACORRENTE cc ON cc.idConta = c.idConta
+        LEFT JOIN CONTAINVESTIMENTO ci ON ci.idConta = c.idConta
+    """
+    cursor.execute(query)
+    total, ativas, inativas, saldo_total = cursor.fetchone()
+    return {
+        'total_contas': total,
+        'contas_ativas': ativas,
+        'contas_inativas': inativas,
+        'saldo_total': round(saldo_total or 0, 2)
+    }
+
+def distribuicao_tipos(connection):
+    cursor = connection.cursor()
+    query = """
+        SELECT tipoConta, COUNT(*)
+        FROM (
+          SELECT c.idConta,
+                 CASE
+                   WHEN cc.idConta IS NOT NULL THEN 'Corrente'
+                   WHEN ci.idConta IS NOT NULL THEN 'Investimento'
+                   ELSE 'Desconhecido'
+                 END AS tipoConta
+          FROM CONTA c
+          LEFT JOIN CONTACORRENTE cc ON cc.idConta = c.idConta
+          LEFT JOIN CONTAINVESTIMENTO ci ON ci.idConta = c.idConta
+        ) sub
+        GROUP BY tipoConta
+    """
+    cursor.execute(query)
+    labels, values = zip(*cursor.fetchall()) if cursor.rowcount else ([], [])
+    return {'labels': list(labels), 'values': list(values)}
+
+def contas_ativas_inativas(connection):
+    cursor = connection.cursor()
+    query = """
+        SELECT CASE WHEN ativa='S' THEN 'Ativas' ELSE 'Inativas' END AS status,
+               COUNT(*)
+        FROM CONTA
+        GROUP BY ativa
+    """
+    cursor.execute(query)
+    labels, values = zip(*cursor.fetchall()) if cursor.rowcount else ([], [])
+    return {'labels': list(labels), 'values': list(values)}
+
+def tx_por_mes(connection, id_conta):
+    cursor = connection.cursor()
+    query = """
+        SELECT COUNT(*)
+        FROM TRANSACOES
+        WHERE contaOrigem = %s
+          AND dataTransacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    """
+    cursor.execute(query, (id_conta,))
+    return cursor.fetchone()[0] or 0
+  

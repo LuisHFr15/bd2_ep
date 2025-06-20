@@ -1,44 +1,126 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="text-3xl font-montserrat">Gerenciamento de Contas</h1>
+<div class="container mx-auto p-6 space-y-8 font-montserrat">
+  <h1 class="text-3xl font-bold flex justify-center">Dashboard de Contas</h1>
 
-<form method="get" action="/contas">
-  <div class="input-group mb-5">
-    <input type="text" class="form-control" name="busca_conta" placeholder="Buscar por Código de Conta">
-    <button class="btn btn-outline-primary" type="submit">Buscar</button>
+  <form method="get" action="/contas" class="flex items-center gap-4">
+    <div class="flex-1">
+      <input type="text" name="busca_conta" value="{{ request.args.get('busca_conta', '') }}"
+             placeholder="Buscar por Código de Conta ou CPF/CNPJ"
+             class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring focus:ring-blue-200" />
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Buscar</button>
+    <a href="/contas?export_csv=1" class="ml-auto text-sm text-gray-600 hover:underline">Exportar CSV</a>
+  </form>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h3 class="text-sm font-semibold text-gray-500">Total de Contas</h3>
+      <p class="text-2xl font-bold text-gray-800 font-red-rose">{{ indicadores.total_contas | compacto }}</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h3 class="text-sm font-semibold text-gray-500">Contas Ativas</h3>
+      <p class="text-2xl font-bold text-green-600 font-red-rose">{{ indicadores.contas_ativas | compacto }}</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h3 class="text-sm font-semibold text-gray-500">Contas Inativas</h3>
+      <p class="text-2xl font-bold text-red-600 font-red-rose">{{ indicadores.contas_inativas | compacto }}</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <h3 class="text-sm font-semibold text-gray-500">Saldo Total</h3>
+      <p class="text-2xl font-bold text-blue-600 font-red-rose">R$ {{ indicadores.saldo_total | compacto }}</p>
+    </div>
   </div>
-</form>
 
-<table class="table table-hover">
-  <thead>
-    <tr>
-      <th>ID Conta</th>
-      <th>Tipo de Conta</th>
-      <th>CPF/CNPJ</th>
-      <th>Pessoa</th>
-      <th>Saldo Atual</th>
-      <th>Renda Mensal</th>
-      <th>Perf. Crédito</th>
-      <th>Status da Conta</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for conta in contas %}
-    <tr>
-      <td>{{ conta.idConta }}</td>
-      <td>{{conta.tipoConta }}</td>
-      <td>{{ conta.codigoPessoa }}</td>
-      <td>{{ conta.tipoPessoa }}</td>
-      <td>R$ {{ "%.2f"|format(conta.saldo) }}</td>
-      <td>R$ {{ "%.2f"|format(conta.renda) }}</td>
-      <td>{{ conta.perfilCredito }}</td>
-      <td>{{ "Ativa" if conta.ativo == 'S' else "Inativa" }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Distribuição de Tipos de Conta</h3>
+      <div id="chartTipos" class="w-full h-64"></div>
+    </div>
 
-<div class="d-flex justify-content-center">
-  <a class="btn btn-primary" href="/contas?page={{ page + 1 }}">Mostrar Mais</a>
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Contas Ativas vs Inativas</h3>
+      <div id="chartAtivas" class="w-full h-64"></div>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto bg-white rounded-2xl shadow-lg p-6">
+    <h2 class="text-xl font-bold text-gray-700 mb-4">Listagem de Contas</h2>
+    <table class="table-auto w-full text-sm text-left text-gray-600">
+      <thead class="bg-gray-100 text-xs uppercase text-gray-700">
+        <tr>
+          <th class="px-4 py-2">ID Conta</th>
+          <th class="px-4 py-2">Tipo</th>
+          <th class="px-4 py-2">CPF/CNPJ</th>
+          <th class="px-4 py-2">Pessoa</th>
+          <th class="px-4 py-2 text-right">Saldo</th>
+          <th class="px-4 py-2 text-right">Renda Mensal</th>
+          <th class="px-4 py-2 text-center">Transações/Mês</th>
+          <th class="px-4 py-2 text-center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conta in contas %}
+        <tr class="border-b hover:bg-gray-50 transition">
+          <td class="px-4 py-2">{{ conta.idConta }}</td>
+          <td class="px-4 py-2">{{ conta.tipoConta }}</td>
+          <td class="px-4 py-2">{{ conta.codigoPessoa }}</td>
+          <td class="px-4 py-2">
+            {% if conta.tipoPessoa == 'F' %}
+              Física
+            {% else %}
+              Jurídica
+            {% endif %}
+          </td>
+          <td class="px-4 py-2 text-right">R$ {{ "%.2f"|format(conta.saldo) }}</td>
+          <td class="px-4 py-2 text-right">R$ {{ "%.2f"|format(conta.renda) }}</td>
+          <td class="px-4 py-2 text-center">{{ conta.tx_mes }}</td>
+          <td class="px-4 py-2 text-center">
+            <span class="inline-block px-2 py-1 rounded-lg text-white text-xs font-medium {% if conta.ativo=='S' %}bg-green-600{% else %}bg-red-600{% endif %}">
+              {{ 'Ativa' if conta.ativo=='S' else 'Inativa' }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="flex justify-center mt-4">
+      <a href="/contas?page={{ page-1 }}&busca_conta={{ request.args.get('busca_conta','') }}"
+         class="px-4 py-2 bg-gray-200 rounded-l hover:bg-gray-300 {% if page <=1 %}opacity-50 cursor-not-allowed{% endif %}">Anterior</a>
+      <span class="px-4 py-2 bg-white border-t border-b">Página {{ page }}</span>
+      <a href="/contas?page={{ page+1 }}&busca_conta={{ request.args.get('busca_conta','') }}"
+         class="px-4 py-2 bg-gray-200 rounded-r hover:bg-gray-300">Próxima</a>
+    </div>
+  </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const tiposData = {{ graficos.tipos | tojson }};
+    const ativasData = {{ graficos.ativas | tojson }};
+
+    new ApexCharts(document.querySelector('#chartTipos'), {
+      chart: {
+        type: 'donut',
+        height: 280
+      },
+      series: tiposData.values,
+      labels: tiposData.labels,
+      colors: ['#34D399','#60A5FA','#FBBF24','#F87171'],
+      legend: { position: 'bottom' }
+    }).render();
+
+    new ApexCharts(document.querySelector('#chartAtivas'), {
+      chart: {
+        type: 'bar',
+        height: 280
+      },
+      series: [{ name: 'Contas', data: ativasData.values }],
+      xaxis: { categories: ativasData.labels },
+      colors: ['#22C55E','#EF4444']
+    }).render();
+  });
+</script>
 {% endblock %}

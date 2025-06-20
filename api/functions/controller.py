@@ -3,23 +3,38 @@ from flask import render_template, request
 from functions import calculate as c
 from functions.utils import conecta_db
 
-def render_contas(session: boto3.Session) -> render_template:
-  connection = conecta_db(session)
-  page = request.args.get('page', default=1, type=int)
-  limit = 50
-  offset = (page - 1) * limit
-  
-  conta_buscada = request.args.get('busca_conta')
-  if conta_buscada:
-      contas = c.listar_contas_filtrada(connection
-                                      ,conta=conta_buscada
-                                      ,offset=offset)
-  else:
-      contas = c.listar_todas_contas(connection
-                                  ,offset=offset)
-      
-  return render_template('contas.html', contas=contas, page=page)
+def render_contas(session):
+    connection = conecta_db(session)
+    page = request.args.get('page', default=1, type=int)
+    limit = 50
+    offset = (page - 1) * limit
+    busca = request.args.get('busca_conta')
 
+    if request.args.get('export_csv'):
+        pass
+
+    if busca:
+        contas = c.listar_contas_filtrada(connection, conta=busca, offset=offset, limit=limit)
+    else:
+        contas = c.listar_todas_contas(connection, offset=offset, limit=limit)
+
+    indicadores = c.indicadores_contas(connection)
+    graficos = {
+        'tipos': c.distribuicao_tipos(connection),
+        'ativas': c.contas_ativas_inativas(connection)
+    }
+
+    for conta in contas:
+        conta['tx_mes'] = c.tx_por_mes(connection, conta['idConta'])
+        
+    return render_template(
+        'contas.html',
+        contas=contas,
+        page=page,
+        indicadores=indicadores,
+        graficos=graficos
+    )
+  
 def render_transacoes(session: boto3.Session) -> render_template:
   connection = conecta_db(session)
   page = request.args.get('page', default=1, type=int)
