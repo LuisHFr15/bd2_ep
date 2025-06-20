@@ -1,65 +1,6 @@
 import boto3, pymysql
 from functions.utils import conecta_db
 
-def listar_todas_transacoes(connection: pymysql.connect, offset: int = 0) -> list:
-  cursor = connection.cursor()
-
-    
-  query = """SELECT idTransacao, contaOrigem, contaDestino
-                  , tipoTransacao, valorTransacao, dataTransacao
-                  FROM TRANSACOES
-                  ORDER BY dataTransacao DESC
-                  LIMIT 10 OFFSET %s"""
-  cursor.execute(query, offset)
-  
-  response = cursor.fetchall()
-  connection.close()
-  
-  transacoes = []
-  for row in response:
-    if len(row) < 6:
-      continue
-    transacoes.append({
-      'id': row[0],
-      'origem': row[1],
-      'destino': row[2],
-      'tipo': row[3],
-      'valor': row[4],
-      'data': row[5]
-    })
-    
-  return transacoes
-
-def listar_transacoes_filtradas(connection: pymysql.connect
-                                ,conta_origem: str
-                                ,offset: int = 0) -> list:
-  cursor = connection.cursor()
-  query = """SELECT idTransacao, contaOrigem, contaDestino
-                  , tipoTransacao, valorTransacao, dataTransacao
-                  FROM TRANSACOES
-                  WHERE contaOrigem = %s
-                  ORDER BY dataTransacao DESC
-                  LIMIT 10 OFFSET %s"""
-  cursor.execute(query, (conta_origem, offset))
-  
-  response = cursor.fetchall()
-  connection.close()
-  
-  transacoes = []
-  for row in response:
-    if len(row) < 6:
-      continue
-    transacoes.append({
-      'id': row[0],
-      'origem': row[1],
-      'destino': row[2],
-      'tipo': row[3],
-      'valor': row[4],
-      'data': row[5]
-    })
-    
-  return transacoes
-
 def listar_todas_contas(connection, offset=0, limit=50):
     cursor = connection.cursor()
     query = """
@@ -294,3 +235,160 @@ def tx_por_mes(connection, id_conta):
     cursor.execute(query, (id_conta,))
     return cursor.fetchone()[0] or 0
   
+def listar_todas_transacoes(connection, offset=0, limit=50):
+    cursor = connection.cursor()
+    query = """
+        SELECT
+          idTransacao,
+          contaOrigem,
+          contaDestino,
+          tipoTransacao,
+          valorTransacao,
+          DATE_FORMAT(dataTransacao, '%%d/%%m/%%Y %%H:%%i:%%s') AS dataTransacao
+        FROM TRANSACOES
+        ORDER BY dataTransacao DESC
+        LIMIT %s OFFSET %s
+    """
+    cursor.execute(query, (limit, offset))
+    cols = ['idTransacao','contaOrigem','contaDestino','tipo','valor','dataTransacao']
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+def listar_transacoes_filtradas(connection, conta_origem=None, offset=0, limit=50):
+    cursor = connection.cursor()
+    query = """
+        SELECT
+          idTransacao,
+          contaOrigem,
+          contaDestino,
+          tipoTransacao,
+          valorTransacao,
+          DATE_FORMAT(dataTransacao, '%%d/%%m/%%Y %%H:%%i:%%s') AS dataTransacao
+        FROM TRANSACOES
+        WHERE contaOrigem = %s
+        ORDER BY dataTransacao DESC
+        LIMIT %s OFFSET %s
+    """
+    cursor.execute(query, (conta_origem, limit, offset))
+    cols = ['idTransacao','contaOrigem','contaDestino','tipo','valor','dataTransacao']
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+def indicadores_transacoes(connection):
+  cursor = connection.cursor()
+  query = """
+      SELECT
+        COUNT(*) AS total_transacoes,
+        SUM(CASE WHEN tipoTransacao='CREDITO' THEN 1 ELSE 0 END) AS creditos,
+        SUM(CASE WHEN tipoTransacao='DEBITO' THEN 1 ELSE 0 END) AS debitos,
+        SUM(valorTransacao) AS volume_total
+      FROM TRANSACOES
+  """
+  cursor.execute(query)
+  total, cred, deb, vol = cursor.fetchone()
+  return {
+      'total_transacoes': total or 0,
+      'creditos': cred or 0,
+      'debitos': deb or 0,
+      'volume_total': round(vol or 0, 2)
+  }
+
+
+def perfil_transacoes(connection):
+  cursor = connection.cursor()
+  query = """
+      SELECT tipoTransacao, COUNT(*)
+      FROM TRANSACOES
+      GROUP BY tipoTransacao
+  """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+  if not rows:
+      return {'labels': [], 'values': []}
+  labels, values = zip(*rows)
+  return {'labels': list(labels), 'values': list(values)}
+
+
+def transacoes_por_dia(connection):
+  cursor = connection.cursor()
+  query = """
+      SELECT DATE_FORMAT(dataTransacao, '%%d/%m') AS dia,
+              COUNT(*)
+      FROM TRANSACOES
+      WHERE dataTransacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      GROUP BY dia
+      ORDER BY dia ASC
+  """
+  cursor.execute(query)
+  labels, values = zip(*cursor.fetchall()) if cursor.rowcount else ([], [])
+  return {'labels': list(labels), 'values': list(values)}
+  
+def estatisticas_valor_transacoes(connection):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT valorTransacao
+        FROM TRANSACOES
+    """)
+    valores = [row[0] for row in cursor.fetchall()]
+
+    n = len(valores)
+    if n == 0:
+        media = mediana = desvio = 0.0
+    else:
+        media = sum(valores) / n
+        sorted_vals = sorted(valores)
+        mid = n // 2
+        if n % 2 == 1:
+            mediana = sorted_vals[mid]
+        else:
+            mediana = (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+        mean = media
+        variancia = sum((x - mean) ** 2 for x in valores) / n
+        desvio = variancia ** 0.5
+
+    return {
+        'media_valor': round(media, 2),
+        'mediana_valor': round(mediana, 2),
+        'std_valor': round(desvio, 2)
+    }
+
+def top_contrapartes(connection, limit=10):
+  cursor = connection.cursor()
+  query = """
+      SELECT contaDestino AS contra, COUNT(*) AS freq
+      FROM TRANSACOES
+      GROUP BY contaDestino
+      ORDER BY freq DESC
+      LIMIT %s
+  """
+  cursor.execute(query, (limit,))
+  labels, values = zip(*cursor.fetchall()) if cursor.rowcount else ([], [])
+  return {'labels': list(labels), 'values': list(values)}
+
+
+def transacoes_por_perfil_conta(connection):
+  cursor = connection.cursor()
+  query = """
+      SELECT c.perfilCredito AS perfil, COUNT(*)
+      FROM TRANSACOES t
+      JOIN CONTA c ON c.idConta = t.contaOrigem
+      GROUP BY c.perfilCredito
+  """
+  cursor.execute(query)
+  labels, values = zip(*cursor.fetchall()) if cursor.rowcount else ([], [])
+  return {'labels': list(labels), 'values': list(values)}
+  
+def histograma_valores_ranges(connection):
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT valorTransacao
+        FROM TRANSACOES
+    """)
+    valores = [row[0] for row in cursor.fetchall()]
+    ranges = [0, 1000, 5000, 10000, 20000, float('inf')]
+    labels = ['0-1k', '1k-5k', '5k-10k', '10k-20k', '20k+']
+    counts = [0] * (len(ranges) - 1)
+    for v in valores:
+        for i in range(len(ranges)-1):
+            if ranges[i] <= v < ranges[i+1]:
+                counts[i] += 1
+                break
+    return {'labels': labels, 'values': counts}

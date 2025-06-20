@@ -32,28 +32,50 @@ def render_contas(session):
         contas=contas,
         page=page,
         indicadores=indicadores,
-        graficos=graficos
+        graficos=graficos,
+        title='DBSysBank - Contas'
     )
   
-def render_transacoes(session: boto3.Session) -> render_template:
-  connection = conecta_db(session)
-  page = request.args.get('page', default=1, type=int)
-  limit = 50
-  offset = (page - 1) * limit
-  
-  conta_origem = request.args.get('busca_transacoes')
-  
-  if conta_origem:
-      transacoes = c.listar_transacoes_filtradas(connection
-                                              ,conta_origem=conta_origem
-                                              ,offset=offset)
-  
-  else:
-      transacoes = c.listar_todas_transacoes(connection
-                                          ,offset=offset)
-  return render_template('transacoes.html'
-                          ,transacoes=transacoes
-                          ,page=page)
+def render_transacoes(session):
+    connection = conecta_db(session)
+    page    = request.args.get('page', default=1, type=int)
+    limit   = 50
+    offset  = (page - 1) * limit
+    busca   = request.args.get('busca_transacoes')
+
+    if busca:
+        transacoes = c.listar_transacoes_filtradas(
+            connection,
+            conta_origem=busca,
+            offset=offset,
+            limit=limit
+        )
+    else:
+        transacoes = c.listar_todas_transacoes(
+            connection,
+            offset=offset,
+            limit=limit
+        )
+
+    indicadores = c.indicadores_transacoes(connection)
+    valor_stats = c.estatisticas_valor_transacoes(connection)
+    indicadores.update(valor_stats)
+
+    contra = c.top_contrapartes(connection)
+    perfil = c.transacoes_por_perfil_conta(connection)
+
+    bins_data = c.histograma_valores_ranges(connection)
+
+    return render_template(
+        'transacoes.html',
+        transacoes      = transacoes,
+        page            = page,
+        indicadores     = indicadores,
+        graficos_bins   = bins_data,
+        graficos_contra = contra,
+        graficos_perfil = perfil,
+        title='DBSysBank - Transacoes'
+    )
   
 def render_dashboard_investimentos(session: boto3.Session) -> render_template:
   connection = conecta_db(session)
@@ -66,9 +88,10 @@ def render_dashboard_investimentos(session: boto3.Session) -> render_template:
   tipo_renda_grafico = request.args.get('tipoInvestimento', 'AMBOS')
   datas, rendimentos = c.rendimento_por_mes(connection, tipo_renda_grafico)
   
-  return render_template('dashboard.html', total_investido=total_investido
+  return render_template('investimentos.html', total_investido=total_investido
                          ,total_contas=total_contas, total_pessoas=total_pessoas
                          ,corrente=corrente, investimento=investimento
                          ,datas=datas, rendimentos=rendimentos
-                         ,ultimas_ordens=ordens)
+                         ,ultimas_ordens=ordens
+                         ,title='DBSysBank - Investimentos')
   

@@ -7,21 +7,19 @@
     <link rel="stylesheet" href="./assets/vendor/apexcharts/dist/apexcharts.css">
   </head>
 <body>
-<nav class="w-auto bg-gray-800 text-white py-6">
-  <div class="flex justify-between mx-8 font-monda">
-    <a class="navbar-brand" href="/">DBSysBank</a>
-    <div>
-      <ul class="flex justify-evenly align-items-center gap-12">
-        <li><a class="text-gray-400 transition-all 
-      duration-200 hover:text-gray-100" href="/contas">Contas</a></li>
-        <li><a class="text-gray-400 transition-all 
-      duration-200 hover:text-gray-100" href="/transacoes">Transações</a></li>
-        <li><a class="text-gray-400 transition-all 
-      duration-200 hover:text-gray-100" href="/dashboard">Investimentos</a></li>
-      </ul>
-    </div>
+<header class="bg-white shadow-md sticky top-0 z-50">
+  <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-3">
+      <img src="{{ url_for('static', filename='imgs/logo.png') }}" class="w-1/5" alt="Logo">
+      <span class="text-2xl font-bold text-gray-800">BDSys Bank</span>
+    </a>
+    <nav class="space-x-4">
+      <a href="/dashboard" class="text-gray-600 hover:text-blue-600 font-medium">Investimentos</a>
+      <a href="/contas" class="text-gray-600 hover:text-blue-600 font-medium">Contas</a>
+      <a href="/transacoes" class="text-gray-600 hover:text-blue-600 font-medium">Transações</a>
+    </nav>
   </div>
-</nav>
+</header>
 
 <div class="w-auto bg-gray-100">
   {% block content %}{% endblock %}

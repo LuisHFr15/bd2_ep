@@ -183,8 +183,6 @@ def worker_alimenta_contas(con_params: dict, start: int, end: int, thread_id: in
             else:
                 contas_investimento.append([idConta] + dados_tipo)
 
-
-        # Scripts de insert
         script_conta_corrente = """INSERT IGNORE INTO CONTACORRENTE
         (idConta, saldoConta, limiteConta) VALUES (%s, %s, %s)"""
 

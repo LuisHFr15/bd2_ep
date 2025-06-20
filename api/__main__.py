@@ -17,7 +17,7 @@ session = conecta_sessao_aws()
 
 @dbsysbank.route('/')
 def main() -> render_template:
-    return render_template('base.html', title='DBSysBank - Menu')
+    return render_template('home.html', title='DBSysBank - Menu')
 
 @dbsysbank.route('/contas')
 def contas() -> render_template:
